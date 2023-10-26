@@ -1,4 +1,28 @@
+# TODO Vivid:
+# TODO Джамал: начал работу
+#  Динамическое написание книги, с сохранением результата, (в .md) - Джамал
+#  Сохранение результата предполагает сохранение в рамках генерации одной книги.
+#  Чтобы если падал сайт, то генерация продолжалась после поднятия.
+#  Должна быть возможность ручного ввода любых данных, включая названия глав книги и их содержания.
+
+# TODO Вячеслав: пока рано
+#  Бэк-енд.
+#  Сохранение книги в PDF(из .md) - Вячеслав. Идея: использовать FPDF для Python
+#  Динамическая отправка процесса генерации на фронт.
+#  Придумать как реализовать аккаунты, дабы данные пользовательского ввода сохранялись и если пользователь
+#  уже генерировал книгу ранее, мог ее скачать заново.
+
+# TODO Ибро: пока рано
+#  Фронт-енд. Для начала хотя бы главную страницу. С НОРМАЛЬНЫМ ДИЗАЙНОМ.
+#  Идея:
+#  Сайт должен быть написан от и до на react.
+#  С поддержкой websockets (для отслеживания процесса генерации)
+
+# Все части программы могут поддаваться критике и обсуждаться членам группы (Vivid).
+# Если есть какие-либо предложения, писать в чат.
+
 import asyncio
+import os
 import re
 
 import g4f
@@ -61,6 +85,7 @@ class Vivid:
         self.genre = genre
         self.chapters = []
         self.book = book
+        self.book_id = uuid.uuid4()
 
     @staticmethod
     async def gpt35(ans):
@@ -123,12 +148,15 @@ class Vivid:
             chapter_text = ""
             async for text in self.chapter_generator(book, chapter, chapters):
                 chapter_text += text
-        self.chapters += [(chapters[chapter], chapter_text)]
+        _uuid = uuid.uuid4()
+        with open(f"books/chapter-{_uuid}-{self.book}.md", 'a') as file:
+            file.write(chapter_text)
+        self.chapters += [(chapters[chapter], _uuid)]
         print(f"\rПожалуйста, подождите...... [{len(self.chapters)}/{self.CHAPTERS_COUNT}]", end='')
         # TODO: вывод прогресса в процентах: отдельная переменная для количества полностью готовых глав
-        # (кол-во готовых)*(100/(кол-во всего глав))+
-        # ((кол-во символов в неготовых)/(должно быть символов)*100)*(100/(кол-во всего глав))
-        # вроде как то так считается
+        #  (кол-во готовых)*(100/(кол-во всего глав))+
+        #  ((кол-во символов в неготовых)/(должно быть символов)*100)*(100/(кол-во всего глав))
+        #  вроде как то так считается
 
     async def chapters_generator(self, book):
         result = await self.gpt(self.REQUEST_CHAPTERS.format(
@@ -156,23 +184,26 @@ class Vivid:
         print()
 
         for chapter in self.chapters:
-            print(chapter[0][1])
-            print(*chapter[1].split('\n\n')[1:], sep='\n')
-            print()
+            with open(f"books/chapter-{chapter[1]}-{self.book}.md", 'r') as file:
+                print(chapter[0][1])
+                print(*file.read().split('\n\n')[1:], sep='\n')
+                print()
 
     def save_book_to_md(self):
-        _uuid = uuid.uuid4()
-
-        with open(f'books/{_uuid}-{self.book}.txt', 'a') as file:
+        with open(f'books/book-{self.book_id}-{self.book}.md', 'a') as file:
             file.write(f"# {self.book}\n\nСписок глав:\n")
             for i, ch in enumerate(self.chapters):
                 file.write(f"{i + 1}. {ch[0][1]}\n")
             file.write("\n")
 
             for ch in self.chapters:
-                file.write(f"## {ch[0][1]}\n")
-                [file.write(f"{line}\n") for line in ch[1].split('\n\n')[1:]]
-                file.write('\n')
+                with open(f"books/chapter-{ch[1]}-{self.book}.md", 'r') as ch_file:
+                    file.write(f"## {ch[0][1]}\n")
+                    [file.write(f"{line}\n") for line in ch_file.read().split('\n\n')[1:]]
+                    file.write('\n')
+
+            for ch in self.chapters:
+                os.remove(f"books/chapter-{ch[1]}-{self.book}.md")
 
 
 # vivid = Vivid(chapters_count=int(input('Введите количество глав: ')),
