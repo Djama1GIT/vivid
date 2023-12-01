@@ -1,221 +1,216 @@
-# TODO Vivid:
-# TODO Джамал: начал работу
-#  Динамическое написание книги, с сохранением результата, (в .md) - Джамал
-#  Сохранение результата предполагает сохранение в рамках генерации одной книги.
-#  Чтобы если падал сайт, то генерация продолжалась после поднятия.
-#  Должна быть возможность ручного ввода любых данных, включая названия глав книги и их содержания.
-
-# TODO Вячеслав: пока рано
-#  Бэк-енд.
-#  Сохранение книги в PDF(из .md) - Вячеслав. Идея: использовать FPDF для Python
-#  Динамическая отправка процесса генерации на фронт.
-#  Придумать как реализовать аккаунты, дабы данные пользовательского ввода сохранялись и если пользователь
-#  уже генерировал книгу ранее, мог ее скачать заново.
-
-# TODO Ибро: пока рано
-#  Фронт-енд. Для начала хотя бы главную страницу. С НОРМАЛЬНЫМ ДИЗАЙНОМ.
-#  Идея:
-#  Сайт должен быть написан от и до на react.
-#  С поддержкой websockets (для отслеживания процесса генерации)
-
-# Все части программы могут поддаваться критике и обсуждаться членам группы (Vivid).
-# Если есть какие-либо предложения, писать в чат.
-
 import asyncio
-import os
-import re
 
-import g4f
-import uuid
+import uvicorn
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+
+from server.vivid import Vivid
+
+import logging
+
+# Create a custom logger
+logger = logging.getLogger(__name__)
+
+# Set level of logger
+logger.setLevel(logging.DEBUG)
+
+# Create handlers
+c_handler = logging.StreamHandler()
+c_handler.setLevel(logging.DEBUG)
+
+# Create formatters and add it to handlers
+c_format = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+c_handler.setFormatter(c_format)
+
+# Add handlers to the logger
+logger.addHandler(c_handler)
+
+app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Разрешает все источники
+    allow_credentials=True,
+    allow_methods=["*"],  # Разрешает все методы
+    allow_headers=["*"],  # Разрешает все заголовки
+)
 
 
-class Vivid:
-    """
-    Vivid(яркий) - просто слово, состоящее из 3 различных букв
-    V - Вячеслав
-    I - Ибро
-    D - Джамал
-    """
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: dict[str, WebSocket] = {}
+        self.vivid_instances: dict[str, Vivid] = {}
 
-    REQUEST_CHAPTERS_PATTERN = r'(\d+)\.\s(.*)'
-    REQUEST_CHAPTER_PATTERN = "Текст главы"
+    async def connect(self, websocket: WebSocket):
+        session_name = "aboba"
+        await websocket.accept()
+        self.active_connections[session_name] = websocket
+        if session_name not in self.vivid_instances:
+            self.vivid_instances[session_name] = Vivid()  # Initialize Vivid with default parameters
+        logger.info(f'New connection established with session: {session_name}')
+        return session_name
 
-    def __init__(
-            self,
-            chapters_count=4,
-            chapters_length=500,
-            v: int | float | str = "3.5",
-            genre="не указан",
-            book="не указан"
-    ):
-        if chapters_count < 4:
-            chapters_count = 4
-            print('Кол-во глав не может быть меньше 4, поэтому установлено как 4')
-        if chapters_length < 300:
-            chapters_length = 300
-            print('Кол-во символов в главе не может быть меньше 300, поэтому установлено как 300')
-        self.CHAPTERS_COUNT = chapters_count
-        self.CHAPTERS_LENGTH = chapters_length
-        self.REQUEST_CHAPTERS = """Действуй в роли писателя в жанре "{0}"! Пиши книгу на русском языке!
-           Сгенерируй названия """ + str(self.CHAPTERS_COUNT) + """" штук глав для книги "{1}".
-           Отвечай строго по шаблону ниже и больше никак!
-
-           Номер. Название главы
-
-           """
-
-        self.REQUEST_CHAPTER = """Действуй в роли писателя в жанре "{0}"! Пиши книгу на русском языке!
-           Сгенерируй текст размером """ + str(self.CHAPTERS_LENGTH) + """ символов главы "{2}" для книги "{1}".
-           Названия прошлых глав(используй для правильной последовательности повествования):
-           {4}
-
-           Не делай отсылок к прошлым или будущим главам. Не пиши ничего о том, что будет в следующей главе.
-
-           Отвечай строго по шаблону ниже и больше никак!
-
-           "Глава {2}"
-           {3}   
-           """
-        if str(v) in ["3.5", "3"]:
-            self.gpt = self.gpt35
-        elif str(v) == '4':
-            self.gpt = self.gpt4
-        else:
-            raise ValueError('Invalid GPT Version')
-        self.genre = genre
-        self.chapters = []
-        self.book = book
-        self.book_id = uuid.uuid4()
+    def disconnect(self, session_name: str):
+        self.active_connections.pop(session_name, None)
+        self.vivid_instances.pop(session_name, None)
+        logger.info(f'Connection with session {session_name} disconnected')
 
     @staticmethod
-    async def gpt35(ans):
-        try:
-            result = await g4f.ChatCompletion.create_async(
-                model=g4f.models.Model(
-                    name='gpt-3.5-turbo',
-                    base_provider='openai',
-                    best_provider=g4f.Provider.RetryProvider([
-                        g4f.Provider.ChatgptX, g4f.Provider.GptGo, g4f.Provider.You,
-                        g4f.Provider.NoowAi, g4f.Provider.GPTalk, g4f.Provider.GptForLove, g4f.Provider.Phind,
-                    ])
-                ),
-                messages=[{"role": "user", "content": ans}],
-                ignored=[""],
-                timeout=180,
-            )
-        except Exception as exc:
-            print(exc)
-            await asyncio.sleep(300)
-            result = await Vivid.gpt35(ans)
-        return result
+    async def send_personal_message(message: str, websocket: WebSocket):
+        await websocket.send_text(message)
+        logger.info(f'Sent personal message: {message}')
 
     @staticmethod
-    async def gpt4(ans):
-        try:
-            result = await g4f.ChatCompletion.create_async(
-                model=g4f.models.gpt_4,
-                messages=[{"role": "user", "content": ans}],
-                timeout=300,
-            )
-        except Exception as exc:
-            print(exc)
-            await asyncio.sleep(300)
-            result = await Vivid.gpt4(ans)
-        return result
+    async def send_json(data: dict, websocket: WebSocket):
+        await websocket.send_json(data)
+        logger.info(f'Sent JSON data: {data}')
 
-    async def __call__(self, *args, **kwargs):
-        print(f"Пожалуйста, подождите......", end='')
-        chapters = []
-        while len(chapters) != self.CHAPTERS_COUNT:
-            _chapters = ""
-            async for text in self.chapters_generator(self.book):
-                _chapters += text
-            chapters = re.findall(self.REQUEST_CHAPTERS_PATTERN, "".join(_chapters))
-        print(f"\rПожалуйста, подождите...... [0/{self.CHAPTERS_COUNT}]", end='')
-        tasks = []
-        for idx, chapter in enumerate(chapters):
-            task = asyncio.create_task(self.generate_chapter(self.book, idx, chapters))
-            tasks.append(task)
-        await asyncio.gather(*tasks)
-        self.chapters.sort()
+    def get_vivid_instance(self, session_name: str):
+        return self.vivid_instances.get(session_name, None)
 
-        self.print_book()
-        self.save_book_to_md()
 
-    async def generate_chapter(self, book, chapter: int, chapters: list[tuple[int, str]]):
-        chapter_text = ""
-        while len(chapter_text) < self.CHAPTERS_LENGTH * 0.6 or chapter_text[-1] != '.':
-            chapter_text = ""
-            async for text in self.chapter_generator(book, chapter, chapters):
-                chapter_text += text
-        _uuid = uuid.uuid4()
-        with open(f"books/chapter-{_uuid}-{self.book}.md", 'a') as file:
-            file.write(chapter_text)
-        self.chapters += [(chapters[chapter], _uuid)]
-        print(f"\rПожалуйста, подождите...... [{len(self.chapters)}/{self.CHAPTERS_COUNT}]", end='')
-        # TODO: вывод прогресса в процентах: отдельная переменная для количества полностью готовых глав
-        #  (кол-во готовых)*(100/(кол-во всего глав))+
-        #  ((кол-во символов в неготовых)/(должно быть символов)*100)*(100/(кол-во всего глав))
-        #  вроде как то так считается
+manager = ConnectionManager()
 
-    async def chapters_generator(self, book):
-        result = await self.gpt(self.REQUEST_CHAPTERS.format(
-            self.genre,
-            book,
-            self.REQUEST_CHAPTERS_PATTERN),
+
+async def generate_chapters_names_for_section(section: str, vivid_instance: Vivid, session_name) -> list[(int, str)]:
+    chapters = await vivid_instance.generate_chapters(section)
+    vivid_instance.chapters[section] = chapters
+
+    await manager.send_json(
+        {
+            "code": 3,
+            "section": section,
+            "chapters": chapters,
+        },
+        manager.active_connections[session_name]
+    )
+    """
+    TODO: returning chapters
+    :param chapter: str(chapter_name)
+    :return: list([(idx, chapter_name)])
+    """
+    return chapters
+
+
+async def generate_chapter(section: dict, chapter: int, vivid_instance: Vivid, session_name: str):
+    # TODO: вывод процентов готовности на фронт
+    chapter = await vivid_instance.generate_chapter(chapter, section["chapters"])
+    logger.info(f'Chapter generated: {chapter}')
+
+
+@app.websocket("/ws/")
+async def websocket_endpoint(websocket: WebSocket):
+    session_name = await manager.connect(websocket)
+    logger.info(f'Websocket endpoint connected with session: {session_name}')
+    vivid_instance = manager.get_vivid_instance(session_name)
+    if vivid_instance:
+        # Send initial data from Vivid instance as JSON
+        await manager.send_json(
+            {
+                "code": 1,
+                "genre": vivid_instance.genre,
+                "bookName": vivid_instance.book,
+                "sectionsCount": vivid_instance.SECTIONS_COUNT,
+                "chaptersCount": vivid_instance.CHAPTERS_COUNT,
+                "chaptersLength": vivid_instance.CHAPTERS_LENGTH,
+                "gptVersion": "3.5",  # TODO: в vivid gpt это функция, надо бы сделать как-то получение просто версии
+                "pregeneration": vivid_instance.pregeneration
+            },
+            websocket,
         )
-        yield result
+    try:
+        while True:
+            data = await websocket.receive_json()  # receive data as JSON
+            # Parse the data from JSON
+            if "cmd" in data and data["cmd"] == "create_or_update_vivid":
+                logger.info(f'Command create_or_update_vivid executed with data: {data}')
+                sections_count = data["sectionsCount"]
+                chapters_count = data["chaptersCount"]
+                chapters_length = data["chaptersLength"]
+                gpt_version = data["gptVersion"]
+                genre = data["genre"]
+                book_name = data["bookName"]
+                vivid = Vivid(sections_count=int(sections_count),
+                              chapters_count=int(chapters_count),
+                              chapters_length=int(chapters_length),
+                              v=gpt_version,
+                              genre=genre,
+                              book=book_name)
+                manager.vivid_instances[session_name] = vivid
+                vivid_instance = vivid
+            elif "cmd" in data and vivid_instance:
+                match data["cmd"]:
+                    case "generate_sections":
+                        logger.info(f'Command generate_sections executed')
+                        sections = await vivid_instance.generate_sections()
+                        await manager.send_json(
+                            {
+                                "code": 2,
+                                "sections": sections,
+                            },
+                            websocket
+                        )
+                    case "confirm_sections":
+                        logger.info(f'Command confirm_sections executed with sections: {data.get("sections")}')
+                        if "sections" in data:
+                            vivid_instance.sections = []
+                            for idx, section in enumerate(data["sections"]):
+                                vivid_instance.sections += [(idx + 1, section["name"])]
+                            for idx, section in vivid_instance.sections:
+                                asyncio.get_running_loop().create_task(
+                                    generate_chapters_names_for_section(section, vivid_instance, session_name)
+                                )
+                                # TODO: asyncio - запуск генерации глав для каждого раздела,
+                                #  асинхронно, когда заканчивается генерация какой-либо из глав, она отправляется
+                                #  на фронт, когда сгенерируются все главы, отправляется сигнал об этом.
+                                #  Добавить пользователю кнопку продолжения генерации или пере-генерации.
+                        await manager.send_json(
+                            {
+                                "code": 200,
+                            },
+                            websocket
+                        )
+                    case "confirm_chapters":
+                        logger.info(f'Command confirm_chapters executed with sections: {data.get("sections")}')
+                        if "sections" in data:
+                            vivid_instance.chapters = data["sections"]
+                        print(vivid_instance.chapters)
 
-    async def chapter_generator(self, book, chapter: int, chapters: list[tuple[int, str]]):
-        result = await self.gpt(self.REQUEST_CHAPTER.format(
-            self.genre,
-            book,
-            f"{chapters[chapter][0]}. {chapters[chapter][1]}",
-            self.REQUEST_CHAPTER_PATTERN,
-            "\n".join(c[1] for c in chapters[:chapter + 1]))
-        )
-        yield result
+                        pregeneration = await vivid_instance.generate_pregeneration()
+                        await manager.send_json(
+                            {
+                                "code": 4,
+                                "pregeneration": pregeneration,
+                            },
+                            websocket
+                        )
+                    case "generate_book":
+                        logger.info(f'Command generate_book executed with sections: {data.get("sections")}')
+                        for section in vivid_instance.chapters:
+                            for i in range(len(section.get("chapters"))):
+                                asyncio.get_running_loop().create_task(
+                                    generate_chapter(section, i, vivid_instance, session_name)
+                                )
+                        await manager.send_json(
+                            {
+                                "code": 200,
+                            },
+                            websocket
+                        )
+                        # TODO: генерация каждой главы, сборка в книгу
+            elif not vivid_instance:
+                logger.warning(f'Instance does not exist')
+                await manager.send_json(
+                    {
+                        "message": "Instance does not exist",
+                    },
+                    websocket
+                )
 
-    def print_book(self):
-        print(f'\r{self.book}\n')
-        print("Список глав:")
-        for i, ch in enumerate(self.chapters):
-            print(f"{i + 1}. {ch[0][1]}")
-        print()
-
-        for chapter in self.chapters:
-            with open(f"books/chapter-{chapter[1]}-{self.book}.md", 'r') as file:
-                print(chapter[0][1])
-                print(*file.read().split('\n\n')[1:], sep='\n')
-                print()
-
-    def save_book_to_md(self):
-        with open(f'books/book-{self.book_id}-{self.book}.md', 'a') as file:
-            file.write(f"# {self.book}\n\nСписок глав:\n")
-            for i, ch in enumerate(self.chapters):
-                file.write(f"{i + 1}. {ch[0][1]}\n")
-            file.write("\n")
-
-            for ch in self.chapters:
-                with open(f"books/chapter-{ch[1]}-{self.book}.md", 'r') as ch_file:
-                    file.write(f"## {ch[0][1]}\n")
-                    [file.write(f"{line}\n") for line in ch_file.read().split('\n\n')[1:]]
-                    file.write('\n')
-
-            for ch in self.chapters:
-                os.remove(f"books/chapter-{ch[1]}-{self.book}.md")
+            # result = await vivid()
+            # await manager.send_personal_message(result.replace('\n\n', '<br>'), websocket)
+    except WebSocketDisconnect:
+        manager.disconnect(session_name)
 
 
-# vivid = Vivid(chapters_count=int(input('Введите количество глав: ')),
-#               chapters_length=int(input('Введите количество символов в одной главе: ')),
-#               v=input('Введите версию GPT: '),
-#               genre=input('Введите название жанра: '),
-#               book=input("Введите название книги: "))
-
-vivid = Vivid(chapters_count=4,
-              chapters_length=300,
-              v=3.5,
-              genre="Фэнтези",
-              book="жил был сдох")
-
-asyncio.run(vivid())
+if __name__ == '__main__':
+    uvicorn.run(app, host='0.0.0.0', port=8081)

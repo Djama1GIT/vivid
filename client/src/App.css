@@ -1,0 +1,123 @@
+body {
+    background-color: #101010;
+    color: #FAFAFA;
+    font-family: 'Montserrat', sans-serif;
+}
+input, select, textarea {
+    float: right;
+    font-family: 'Montserrat', sans-serif;
+}
+.form {
+    margin-left: 20em;
+    margin-top: 20em;
+    width: 80em;
+    font-family: 'Montserrat', sans-serif;
+}
+.selector {
+    height: 30px;
+    font-family: 'Montserrat', sans-serif;
+}
+#book_name {
+    width: 100%;
+    height: 3em;
+    outline: none;
+    color: #FAFAFA;
+    font-size: 60px;
+    text-align: center;
+    border-radius: 10px;
+    background-color: #212121;
+    border: 4px solid;
+    border-image: linear-gradient(to right, red, orange) 1;
+    font-family: 'Montserrat', sans-serif;
+}
+#gpt_version {
+    float: left;
+    margin-top: 5px;
+    font-family: 'Montserrat', sans-serif;
+}
+#requestButton {
+    float: right;
+    margin-right: 10px;
+    margin-top: 5px;
+    font-family: 'Montserrat', sans-serif;
+}
+.step {
+    position: absolute;
+    top: 0em;
+    line-height: 0;
+    color: #333;
+    font-size: 32em;
+    font-family: "Monospace", Courier, monospace;
+    font-weight: bold;
+}
+.description, .sections, .chapters {
+    margin-top: 40em;
+    text-align: center;
+}
+#description, .section, .chapter {
+    margin-top: 4em;
+    width: 60%;
+    float: none;
+    height: 9em;
+    outline: none;
+    color: #FAFAFA;
+    font-size: 18px;
+    text-align: center;
+    border-radius: 10px;
+    background-color: #212121;
+    border: 4px solid;
+    border-image: linear-gradient(to right, red, orange) 1;
+    font-family: 'Montserrat', sans-serif;
+}
+.sections .step {
+    top: 1.5em;
+}
+.sections, .chapters {
+    margin-top: 37em;
+    text-align: left;
+}
+.section {
+    width: 20%;
+    height: 2em;
+    font-size: 12px;
+    border: 2px solid;
+    border-image: linear-gradient(to right, red, orange) 1;
+    margin-left: 30em;
+}
+.chapter {
+    width: 20%;
+    height: 2em;
+    font-size: 12px;
+    border: 2px solid;
+    border-image: linear-gradient(to right, red, orange) 1;
+    margin-left: 30em;
+}
+.chapters .step {
+    top: 3.2em;
+}
+.description .step {
+    top: 5.5em;
+}
+.label {
+    margin: 0;
+    margin-left: 27em;
+    color: #555;
+    line-height: 0;
+    text-align: left;
+}
+.section-label {
+    margin-top: 2em;
+    margin-bottom: 0;
+    margin-left: 24em;
+    color: #555;
+    line-height: 0;
+    text-align: left;
+}
+#confirmSections, #confirmChapters {
+    margin-left: 110em;
+    margin-top: 3em;
+    font-family: 'Montserrat', sans-serif;
+}
+#description {
+    text-align: left;
+}
