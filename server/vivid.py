@@ -1,28 +1,4 @@
-# TODO Vivid:
-# TODO Джамал: начал работу
-#  Динамическое написание книги, с сохранением результата, (в .md) - Джамал
-#  Сохранение результата предполагает сохранение в рамках генерации одной книги.
-#  Чтобы если падал сайт, то генерация продолжалась после поднятия.
-#  Должна быть возможность ручного ввода любых данных, включая названия глав книги и их содержания.
-
-# TODO Вячеслав: пока рано
-#  Бэк-енд.
-#  Сохранение книги в PDF(из .md) - Вячеслав. Идея: использовать FPDF для Python
-#  Динамическая отправка процесса генерации на фронт.
-#  Придумать как реализовать аккаунты, дабы данные пользовательского ввода сохранялись и если пользователь
-#  уже генерировал книгу ранее, мог ее скачать заново.
-
-# TODO Ибро: пока рано
-#  Фронт-енд. Для начала хотя бы главную страницу. С НОРМАЛЬНЫМ ДИЗАЙНОМ.
-#  Идея:
-#  Сайт должен быть написан от и до на react.
-#  С поддержкой websockets (для отслеживания процесса генерации)
-
-# Все части программы могут поддаваться критике и обсуждаться членам группы (Vivid).
-# Если есть какие-либо предложения, писать в чат.
-
 import asyncio
-import os
 import re
 
 import g4f
@@ -30,21 +6,15 @@ import uuid
 
 import logging
 
-# Create a custom logger
 logger = logging.getLogger(__name__)
-
-# Set level of logger
 logger.setLevel(logging.DEBUG)
 
-# Create handlers
 c_handler = logging.StreamHandler()
 c_handler.setLevel(logging.DEBUG)
 
-# Create formatters and add it to handlers
 c_format = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 c_handler.setFormatter(c_format)
 
-# Add handlers to the logger
 logger.addHandler(c_handler)
 
 
@@ -61,28 +31,41 @@ class Vivid:
 
     def __init__(
             self,
-            sections_count=7,
-            chapters_count=12,
-            chapters_length=4000,
+            sections_count=3,
+            chapters_count=4,
+            chapters_length=1500,
             v: int | float | str = "3.5",
             genre="",
             book=""
     ):
         if sections_count < 3:
             chapters_count = 3
-            print('Кол-во разделов не может быть меньше 3, поэтому установлено как 3')
+            logger.warning('Кол-во разделов не может быть меньше 3, поэтому установлено как 3')
+        elif sections_count > 12:
+            chapters_count = 12
+            logger.warning('Кол-во разделов не может быть больше 12, поэтому установлено как 12')
+
         if chapters_count < 4:
             chapters_count = 4
-            print('Кол-во глав в разделе не может быть меньше 4, поэтому установлено как 4')
+            logger.warning('Кол-во глав в разделе не может быть меньше 4, поэтому установлено как 4')
+        elif chapters_count > 40:
+            chapters_count = 40
+            logger.warning('Кол-во глав в разделе не может быть больше 40, поэтому установлено как 40')
+
         if chapters_length < 300:
             chapters_length = 300
-            print('Кол-во символов в главе не может быть меньше 300, поэтому установлено как 300')
+            logger.warning('Кол-во символов в главе не может быть меньше 300, поэтому установлено как 300')
+        elif chapters_length > 4000:
+            chapters_length = 4000
+            logger.warning('Кол-во символов в главе не может быть больше 4000, поэтому установлено как 4000')
+
         self.CHAPTERS_COUNT = chapters_count
         self.CHAPTERS_LENGTH = chapters_length
         self.REQUEST_CHAPTERS = """
         Действуй в роли писателя в жанре "{0}"! Пиши на русском языке!
         Сгенерируй названия """ + str(self.CHAPTERS_COUNT) + """ штук различных глав для раздела "{2}" книги "{1}".
         Не указывай сайты-источники!
+        В конце предложений ставь "."!
         Отвечай строго по шаблону ниже и больше никак!
 
         Номер. Название главы
@@ -91,8 +74,9 @@ class Vivid:
         self.SECTIONS_COUNT = sections_count
         self.REQUEST_SECTIONS = """
         Действуй в роли писателя в жанре "{0}"! Пиши на русском языке!
-        Сгенерируй названия """ + str(self.SECTIONS_COUNT) + """ штук различных разделов для книги "{1}".
+        Сгенерируй названия """ + str(self.SECTIONS_COUNT) + """ штук различных разделов книги "{1}".
         Не указывай сайты-источники!
+        В конце предложений ставь "."!
         Отвечай строго по шаблону ниже и больше никак!
 
         Номер. Название раздела
@@ -105,29 +89,31 @@ class Vivid:
         {2}
 
         Не указывай сайты-источники!
+        В конце предложений ставь "."!
         Ответь строго по шаблону ниже:
         Основные сюжетные места/темы/имена/названия мест/имена героев(если уместно в данной книге):
         ...
 
         {1} - книга о ...
         """
-
         self.REQUEST_CHAPTER = """
         Действуй в роли писателя в жанре "{0}"! Пиши на русском языке!
-        Сгенерируй текст размером """ + str(self.CHAPTERS_LENGTH) + """ символов главы "{2}" для книги "{1}".
+        Сгенерируй текст размером """ + str(self.CHAPTERS_LENGTH) + """ символов главы "{3}" раздела "{2}" книги "{1}".
         Названия прошлых глав(используй для правильной последовательности повествования):
-        {4}
+        {5}
 
         Важная информация:
-        {5}
+        После конца главы обязательно напиши дословно: "Конец главы. Эта глава была о" + о чем была глава!
+        {6}
+        В конце предложений ставь "."!
         Не указывай сайты-источники!
 
         Не делай отсылок к прошлым или будущим главам. Не пиши ничего о том, что будет в следующей главе.
 
         Отвечай строго по шаблону ниже и больше никак!
 
-        "Глава {2}"
-        {3}   
+        "Глава {3}"
+        {4}   
         """
         if str(v) == "3.5":
             self.gpt = self.gpt35
@@ -137,13 +123,14 @@ class Vivid:
             raise ValueError(f'Invalid GPT Version - {v}')
         self.genre = genre
         self.chapters = {}
-        self.sections = []  # TODO
+        self.sections = []
         self.book = book
         self.book_id = uuid.uuid4()
         self.pregeneration = ""
 
     @staticmethod
     async def gpt35(ans):
+        ans = ans.replace("  ", " ").replace("  ", " ").replace("\t", "").replace("   ", "")
         logger.info(f'GPT-3.5 executing: {ans}')
         try:
             result = await g4f.ChatCompletion.create_async(
@@ -160,9 +147,10 @@ class Vivid:
                 timeout=300,
             )
         except Exception as exc:
-            print(exc)
+            logger.error(exc)
             await asyncio.sleep(300)
             result = await Vivid.gpt35(ans)
+        logger.info(f'GPT-3.5 result:\n{result}')
         return result
 
     @staticmethod
@@ -175,55 +163,27 @@ class Vivid:
                 timeout=300,
             )
         except Exception as exc:
-            print(exc)
+            logger.error(exc)
             await asyncio.sleep(300)
             result = await Vivid.gpt4(ans)
+        logger.info(f'GPT-4 result:\n{result}')
         return result
 
-    # async def __call__(self, *args, **kwargs):
-    #     print(f"Пожалуйста, подождите......", end='')
-    #     chapters = []
-    #     while len(chapters) != self.CHAPTERS_COUNT:
-    #         _chapters = ""
-    #         async for text in self.chapters_generator():
-    #             _chapters += text
-    #         chapters = re.findall(self.REQUEST_CHAPTERS_PATTERN, "".join(_chapters))
-    #
-    #     async for text in self.pregeneration_generator(self.book, chapters):
-    #         self.pregeneration = text
-    #         print(text)
-    #
-    #     print(f"\rПожалуйста, подождите...... [0/{self.CHAPTERS_COUNT}]", end='')
-    #     tasks = []
-    #     for idx, chapter in enumerate(chapters):
-    #         task = asyncio.create_task(self.generate_chapter(idx, chapters))
-    #         tasks.append(task)
-    #     await asyncio.gather(*tasks)
-    #     self.chapters.sort()
-    #
-    #     self.print_book()
-    #     self.save_book_to_md()
-    #     self.save_book_to_pdf()
-    #     self.delete_md_chapters()
-    #
-    #     with open(f'books/book-{self.book_id}-{self.book}.md', 'r') as file:
-    #         return "\n".join(file.readlines())
-
-    async def generate_chapter(self, chapter: int, chapters: list[list]):
+    async def generate_chapter(self, section: str, chapter: int, chapters: list[list]):
         chapter_text = ""
         while len(chapter_text) < self.CHAPTERS_LENGTH * 0.6 or chapter_text[-1] != '.':
+            if chapter_text:
+                chapter_text = chapter_text
+                logger.error(f"Что-то пошло не так... перезапуск. ["
+                             f"len={len(chapter_text) >= self.CHAPTERS_LENGTH * 0.6}, "
+                             f".={chapter_text[-1] == '.'}]")
             chapter_text = ""
-            async for text in self.chapter_generator(chapter, chapters):
+            async for text in self.chapter_generator(section, chapter, chapters):
                 chapter_text += text
-        _uuid = uuid.uuid4()
-        with open(f"books/chapter-{_uuid}-{self.book}.md", 'a') as file:
-            file.write(chapter_text)
-        chapters[chapter].append(_uuid)
-        print(f"\rПожалуйста, подождите...... [{len(self.chapters)}/{self.CHAPTERS_COUNT}]", end='')
-        # TODO: вывод прогресса в процентах: отдельная переменная для количества полностью готовых глав
-        #  (кол-во готовых)*(100/(кол-во всего глав))+
-        #  ((кол-во символов в неготовых)/(должно быть символов)*100)*(100/(кол-во всего глав))
-        #  вроде как то так считается
+            chapter_text = re.sub(r'[Кк]онец главы.*', '', chapter_text.strip()).strip()
+            logger.info(f"Generated chapter: {chapter_text}")
+
+        return chapter_text
 
     async def sections_generator(self):
         result = await self.gpt(self.REQUEST_SECTIONS.format(
@@ -239,6 +199,7 @@ class Vivid:
             async for text in self.sections_generator():
                 _sections += text
             sections = re.findall(self.REQUEST_CHAPTERS_PATTERN, "".join(_sections))
+            logger.info(f"Generated sections: {sections}")
         return sections
 
     async def generate_chapters(self, section):
@@ -248,6 +209,7 @@ class Vivid:
             async for text in self.chapters_generator(section):
                 _chapters += text
             chapters = re.findall(self.REQUEST_CHAPTERS_PATTERN, "".join(_chapters))
+            logger.info(f"Generated chapters for section {section}: {chapters}")
         return chapters
 
     async def chapters_generator(self, section):
@@ -259,14 +221,15 @@ class Vivid:
         )
         yield result
 
-    async def chapter_generator(self, chapter: int, chapters: list[list]):
+    async def chapter_generator(self, section: str, chapter: int, chapters: list[list]):
         result = await self.gpt(
             self.REQUEST_CHAPTER.format(
                 self.genre,
                 self.book,
+                section,
                 f"{chapters[chapter][0]}. {chapters[chapter][1]}",
                 self.REQUEST_CHAPTER_PATTERN,
-                "\n".join(c[1] for c in chapters[:chapter + 1]),
+                "\n".join(c[1] for c in chapters[:chapter]) or "Это первая глава",
                 "".join(self.pregeneration)
             )
         )
@@ -276,7 +239,7 @@ class Vivid:
         pregeneration = ""
         async for text in self.pregeneration_generator():
             pregeneration = text
-            print(text)
+        logger.info(f"Generated pregeneration: {pregeneration}")
         return pregeneration
 
     async def pregeneration_generator(self):
@@ -289,37 +252,30 @@ class Vivid:
         )
         yield result
 
-    def print_book(self):
-        print(f'\r{self.book}\n')
-        print("Список глав:")
-        for i, ch in enumerate(self.chapters):
-            print(f"{i + 1}. {ch[0][1]}")
-        print()
-
-        for chapter in self.chapters:
-            with open(f"books/chapter-{chapter[1]}-{self.book}.md", 'r') as file:
-                print(chapter[0][1])
-                print(*file.read().split('\n\n')[1:], sep='\n')
-                print()
-
-    def save_book_to_md(self):
+    def save_book_to_file(self):
+        # temporarily, and then it will save books in pdf
+        # TODO
         with open(f'books/book-{self.book_id}-{self.book}.md', 'a') as file:
-            file.write(f"# {self.book}\n\nСписок глав:\n")
-            for i, ch in enumerate(self.chapters):
-                file.write(f"{i + 1}. {ch[0][1]}\n")
+            file.write(f"## {self.book}\n\nСодержание:\n")
+            for idx, section in enumerate(self.sections):
+                file.write(f"#### Раздел №{idx + 1}. {section[1]}\n")
+                for i, ch in enumerate(self.chapters[section[1]]):
+                    file.write(f"       {i + 1}. {ch[1]}\n")
             file.write("\n")
 
-            for ch in self.chapters:
-                with open(f"books/chapter-{ch[1]}-{self.book}.md", 'r') as ch_file:
-                    file.write(f"## {ch[0][1]}\n")
-                    [file.write(f"{line}\n") for line in ch_file.read().split('\n\n')[1:]]
+            for section in self.sections:
+                file.write(f"## {section[1]}\n")
+                for ch in self.chapters[section[1]]:
+                    file.write(f"### {ch[1]}\n")
+                    chapter = [[]]
+                    for sentence in ch[2].split('\n\n')[1:]:
+                        for word in sentence.split():
+                            chapter[-1].append(word)
+                            if sum(len(word) for word in chapter[-1]) > 80:
+                                chapter.append([])
+                    for line in chapter:
+                        for word in line:
+                            file.write(f"{word} ")
+                        file.write('\n')
                     file.write('\n')
-
-    #
-    # def save_book_to_pdf(self):
-    #     file = f'books/book-{self.book_id}-{self.book}.pdf'
-    #     # TODO: Vyacheslav
-
-    def delete_md_chapters(self):
-        for ch in self.chapters:
-            os.remove(f"books/chapter-{ch[1]}-{self.book}.md")
+            logger.info(f"Книга {self.book}({self.book_id}) сохранена в файл")

@@ -2,35 +2,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import styles from './App.css';
 
 function App() {
-  const [sectionsCount, setSectionsCount] = useState(7);
-
-  const unfilledChapters = [
-    ['1', "Название главы №1 еще не сгенерировано"],
-    ['2', "Название главы №2 еще не сгенерировано"],
-    ['3', "Название главы №3 еще не сгенерировано"],
-    ['4', "Название главы №4 еще не сгенерировано"],
-    ['5', "Название главы №5 еще не сгенерировано"],
-    ['6', "Название главы №6 еще не сгенерировано"],
-    ['7', "Название главы №7 еще не сгенерировано"],
-  ];
-
-  const [sections, setSections] = useState([
-     { name: 'Название раздела №1 еще не сгенерировано', chapters: JSON.parse(JSON.stringify(unfilledChapters)) },
-     { name: 'Название раздела №2 еще не сгенерировано', chapters: JSON.parse(JSON.stringify(unfilledChapters)) },
-     { name: 'Название раздела №3 еще не сгенерировано', chapters: JSON.parse(JSON.stringify(unfilledChapters)) },
-     { name: 'Название раздела №4 еще не сгенерировано', chapters: JSON.parse(JSON.stringify(unfilledChapters)) },
-     { name: 'Название раздела №5 еще не сгенерировано', chapters: JSON.parse(JSON.stringify(unfilledChapters)) },
-     { name: 'Название раздела №6 еще не сгенерировано', chapters: JSON.parse(JSON.stringify(unfilledChapters)) },
-     { name: 'Название раздела №7 еще не сгенерировано', chapters: JSON.parse(JSON.stringify(unfilledChapters)) },
-    ]);
-
-
-  const [chaptersCount, setChaptersCount] = useState(12);
-  const [chaptersLength, setChaptersLength] = useState(4000);
+  const [step, setStep] = useState(0);
+  const [sectionsCount, setSectionsCount] = useState(3);
+  const [sections, setSections] = useState([]);
+  const [chaptersCount, setChaptersCount] = useState(4);
+  const [chaptersLength, setChaptersLength] = useState(1500);
   const [gptVersion, setGptVersion] = useState("3.5");
   const [genre, setGenre] = useState("");
   const [bookName, setBookName] = useState("");
-  const [responseGPT, setResponseGPT] = useState("Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.");
+  const [pregeneration, setPregeneration] = useState("");
+  const [alreadyGeneratedChaptersCount, setAlreadyGeneratedChaptersCount] = useState(0);
+  const [bookLink, setBookLink] = useState("");
 
   // WebSocket instance variable
   const socketRef = useRef(null);
@@ -53,12 +35,20 @@ function App() {
         setChaptersLength(data.chaptersLength);
         setSectionsCount(data.sectionsCount);
         setGptVersion(data.gptVersion);
-        setResponseGPT(data.pregeneration)
+        setPregeneration(data.pregeneration);
+
+        // set sections and chapters
+        setSections(data.sections.map(([id, title]) => {
+          return {
+            name: title,
+            chapters: data.chapters[title] ? data.chapters[title] : []
+          }
+        }));
       } else if (data.code == 2) {
         setSections(data.sections.map(([id, title]) => (
           {
             name: title,
-            chapters: JSON.parse(JSON.stringify(unfilledChapters)),
+            chapters: [],
           }
         )));
       } else if (data.code == 3) {
@@ -75,8 +65,31 @@ function App() {
           });
         });
       } else if (data.code == 4) {
-        setResponseGPT(data.pregeneration)
-      }
+        setPregeneration(data.pregeneration)
+      } else if (data.code == 5) {
+        setSections((prevSections) => {
+         return prevSections.map((section) => {
+           if (section.name === data.section) {
+             return {
+               ...section,
+               chapters: section.chapters.map((chapter, index) => {
+                 if (index === data.chapter) {
+                   return [chapter[0], chapter[1], data.chapter_text];
+                 } else {
+                   return chapter;
+                 }
+               }),
+             };
+           } else {
+             return section;
+           }
+         });
+       });
+     } else if (data.code == 6) {
+        setBookLink(data.link);
+     }
+     console.log(sections);
+     updateStep();
     });
 
 
@@ -96,6 +109,50 @@ function App() {
     };
   }, []);
 
+  const updateStep = () => {
+    let temp_step = 1
+    console.log(sections);
+    if ( sections[0] && temp_step >= 1 ) {
+      temp_step = 2;
+      console.log(2);
+    }
+    if ( sections.some((section) => section.chapters.length > 0) && temp_step >= 2 ) {
+      temp_step = 3;
+    }
+    if ( pregeneration && temp_step >= 3 ) {
+      temp_step = 4;
+    }
+    let alreadyGenerated = 0;
+    for ( const section of sections ) {
+        for ( const chapter of section.chapters ) {
+            if ( chapter.length > 2 ) {
+                alreadyGenerated += 1;
+            }
+        }
+    }
+    if ( alreadyGenerated > 0 && temp_step >= 4) {
+        temp_step = 5
+    }
+    setAlreadyGeneratedChaptersCount(alreadyGenerated);
+    if (alreadyGenerated == chaptersCount * sectionsCount && temp_step >= 5) {
+        temp_step = 5.1
+    }
+    if (bookLink && temp_step >= 5.1) {
+        temp_step = 5.3
+    }
+    setStep(temp_step);
+    setTimeout(() => {
+      window.scrollTo({
+        top: document.body.scrollHeight,
+        behavior: 'smooth'
+      });
+    }, 100);
+  };
+
+  useEffect(() => {
+    updateStep();
+  }, [sections, pregeneration, bookLink]);
+
   const handleButtonClick = () => {
     socketRef.current.send(JSON.stringify({
         cmd: "create_or_update_vivid",
@@ -109,6 +166,7 @@ function App() {
     socketRef.current.send(JSON.stringify({
         cmd: "generate_sections",
     }));
+    setStep(1.5);
   };
 
   const handleSectionsButtonClick = () => {
@@ -125,48 +183,64 @@ function App() {
     }));
   };
 
+  const handleDescriptionButtonClick = () => {
+    socketRef.current.send(JSON.stringify({
+        cmd: "generate_book",
+        pregeneration: pregeneration,
+    }));
+    setStep(5);
+  };
+
+  const handleConfirmResultsButtonClick = () => {
+    socketRef.current.send(JSON.stringify({
+        cmd: "assemble_to_pdf",
+    }));
+    setStep(5.2);
+  };
+
 
   return (
     <div className="App">
-      <p className="step">1</p>
-      <div className="form">
+      <p className="step step1">1</p>
+      <div className="form" disabled={step > 1}>
         <div className="selector">
-            <input type="number" id="sections_count" value={sectionsCount} onChange={(e) => setSectionsCount(e.target.value)} placeholder="Sections count" min="4" max="12"/>
+            <input type="number" id="sections_count" value={sectionsCount} onChange={(e) => setSectionsCount(e.target.value)} placeholder="Sections count" min="4" max="12" disabled={step != 1}/>
         </div>
 
         <div className="selector">
-            <input type="number" id="chapters_count" value={chaptersCount} onChange={(e) => setChaptersCount(e.target.value)} placeholder="Chapters count" min="3" max="40"/>
+            <input type="number" id="chapters_count" value={chaptersCount} onChange={(e) => setChaptersCount(e.target.value)} placeholder="Chapters count" min="3" max="40" disabled={step != 1}/>
         </div>
 
         <div className="selector">
-            <input type="number" id="chapters_length" value={chaptersLength} onChange={(e) => setChaptersLength(e.target.value)} placeholder="Chapters length" min="300" max="4000"/>
+            <input type="number" id="chapters_length" value={chaptersLength} onChange={(e) => setChaptersLength(e.target.value)} placeholder="Chapters length" min="300" max="4000" disabled={step != 1}/>
         </div>
 
         <div className="selector">
-            <input type="text" id="genre" value={genre} onChange={(e) => setGenre(e.target.value)} placeholder="Жанр книги"/>
+            <input type="text" id="genre" value={genre} onChange={(e) => setGenre(e.target.value)} placeholder="Жанр книги" disabled={step != 1}/>
         </div>
 
         <div className="selector">
-            <input type="text" id="book_name" value={bookName} onChange={(e) => setBookName(e.target.value)} placeholder="Название книги"/>
+            <input type="text" id="book_name" value={bookName} onChange={(e) => setBookName(e.target.value)} placeholder="Название книги" disabled={step != 1}/>
         </div>
 
         <div className="selector">
-            <select id="gpt_version" name="gpt_version" value={gptVersion} onChange={(e) => setGptVersion(e.target.value)}>
+            <select id="gpt_version" name="gpt_version" value={gptVersion} onChange={(e) => setGptVersion(e.target.value)} disabled={step != 1}>
                 <option value="3">GPT-3</option>
                 <option value="3.5">GPT-3.5</option>
                 <option value="4">GPT-4</option>
             </select>
         </div>
 
-        <button id="requestButton" onClick={handleButtonClick}>Начать генерацию</button>
+        {step == 1 ? <button id="requestButton" onClick={handleButtonClick}>Начать генерацию</button> : ""}
    </div>
 
-   <div className="sections">
+   {step >= 2 ? <div className="sections">
      <p className="step">2</p>
      <p className="label">Названия разделов</p>
      <div>
        {sections.map((section, index) => (
           <input
+            disabled={step != 2}
             key={index}
             type="text"
             id={`section-${index + 1}`}
@@ -177,7 +251,7 @@ function App() {
               setSections((prevSections) => {
                 return prevSections.map((section, idx) => {
                   if (idx === index) {
-                    return { name: newName ? newName : "" };
+                    return { name: newName ? newName : "", chapters: section.chapters };
                   } else {
                     return section;
                   }
@@ -187,17 +261,19 @@ function App() {
           />
         ))}
      </div>
-     <button id="confirmSections" onClick={handleSectionsButtonClick}>Подтвердить</button>
-    </div>
+     {step == 2 ? <button id="confirmSections" onClick={handleSectionsButtonClick}>Подтвердить</button> : "" }
+    </div> : ""}
 
-   <div className="chapters">
+   {step >= 3 ? <div className="chapters">
       <p className="step">3</p>
       <p className="label">Названия глав</p>
       {sections.map((section, sectionIndex) => (
         <div key={`section-${sectionIndex}`}>
           <p className="section-label">{section.name}</p>
-          {section.chapters.map(([id, title], chapterIndex) => (
+          {section.chapters.map(([id, title, chapter], chapterIndex) => (
+            <>
             <input
+              disabled={step != 3}
               key={`chapter-${chapterIndex}`}
               type="text"
               id={`sections-${sectionIndex + 1}-chapter-${chapterIndex + 1}`}
@@ -225,23 +301,51 @@ function App() {
                 });
               }}
             />
+            {chapter ? <span title={chapter}> ✅</span> : <span title={`Глава "${title}" еще не сгенерирована`}> ❌</span>}
+            </>
           ))}
         </div>
       ))}
-      <button id="confirmChapters" onClick={handleChaptersButtonClick}>
-        Подтвердить
-      </button>
-    </div>
+      {step == 3 ? <button id="confirmChapters" onClick={handleChaptersButtonClick}>Подтвердить</button> : "" }
+    </div> : ""}
 
 
 
-   <div className="description">
+   {step >= 4 ? <div className="description">
        <p className="step">4</p>
        <p className="label">Небольшое описание книги</p>
        <div>
-        <textarea type="text" id="description" value={responseGPT}/>
+        <textarea
+          type="text"
+          className="area-description"
+          value={pregeneration}
+          disabled={step != 4}/>
        </div>
-   </div>
+       {step == 4 ? <button id="confirmDescription" onClick={handleDescriptionButtonClick}>
+         Сгенерировать книгу
+       </button> : "" }
+   </div> : ""}
+
+   {step >= 5 ? <div className="result">
+       <p className="step">5</p>
+       <p className="label">Результаты</p>
+       <div>
+        <div type="text" className="area-results disabled">
+            { step < 5.2 ? <div>
+                Генерация... {(alreadyGeneratedChaptersCount / (sectionsCount * chaptersCount) * 100).toFixed(2)}%
+            </div> : ""}
+            {step == 5.2 ? <div>
+                Книга собирается в pdf...
+            </div> : ""}
+            {step == 5.3 ? <div>
+                Книга готова! Ссылка: <a href={bookLink}>клик</a>
+            </div> : ""}
+        </div>
+       </div>
+       {step == 5.1 ? <button id="confirmResults" onClick={handleConfirmResultsButtonClick}>
+         Собрать книгу в pdf
+       </button> : "" }
+   </div> : ""}
 
 
    </div>
