@@ -1,11 +1,17 @@
 import asyncio
+import os
+import sys
 import time
 
-import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
-from server.vivid import Vivid
+server_path = os.path.join(os.getcwd(), "server")
+sys.path.insert(0, server_path)
+
+from vivid import Vivid
+
+from config import settings
 
 import logging
 
@@ -64,6 +70,8 @@ class ConnectionManager:
 
 
 manager = ConnectionManager()
+
+
 # manager.vivid_instances["aboba"] = Vivid(chapters_length=500)
 # _instance = {
 #     'genre': 'Фэнтези',
@@ -250,7 +258,11 @@ async def websocket_endpoint(websocket: WebSocket):
                 "chaptersCount": vivid_instance.CHAPTERS_COUNT,
                 "chapters": vivid_instance.chapters,
                 "chaptersLength": vivid_instance.CHAPTERS_LENGTH,
-                "gptVersion": "4.0" if vivid_instance.gpt is vivid_instance.gpt4 else "3.5",
+                "gptVersion": {
+                    vivid_instance.gpt35: "3.5",
+                    vivid_instance.gpt37: "3.7",
+                    vivid_instance.gpt4: "4",
+                }[vivid_instance.gpt],
                 "pregeneration": vivid_instance.pregeneration
             },
             websocket,
@@ -337,6 +349,7 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect(session_name)
 
-
+print(settings.NODE_ENV)
 if __name__ == '__main__':
-    uvicorn.run(app, host='0.0.0.0', port=8081)
+    os.system(f"gunicorn {'server.' if settings.NODE_ENV != 'production' else ''}"
+              f"main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind=0.0.0.0:8077")

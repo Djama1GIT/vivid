@@ -34,7 +34,7 @@ class Vivid:
             sections_count=3,
             chapters_count=4,
             chapters_length=1500,
-            v: int | float | str = "3.5",
+            v: int | float | str = "3.7",
             genre="",
             book=""
     ):
@@ -117,6 +117,8 @@ class Vivid:
         """
         if str(v) == "3.5":
             self.gpt = self.gpt35
+        elif str(v) == "3.7":
+            self.gpt = self.gpt37
         elif str(v) == "4.0":
             self.gpt = self.gpt4
         else:
@@ -151,6 +153,32 @@ class Vivid:
             await asyncio.sleep(300)
             result = await Vivid.gpt35(ans)
         logger.info(f'GPT-3.5 result:\n{result}')
+        return result
+
+    @staticmethod
+    async def gpt37(ans):
+        ans = ans.replace("  ", " ").replace("  ", " ").replace("\t", "").replace("   ", "")
+        logger.info(f'GPT-3.5/4 executing: {ans}')
+        try:
+            result = await g4f.ChatCompletion.create_async(
+                model=g4f.models.Model(
+                    name='gpt-3.5-or-gpt-4',
+                    base_provider='openai',
+                    best_provider=g4f.Provider.RetryProvider([
+                        g4f.Provider.ChatgptX, g4f.Provider.GptGo, g4f.Provider.You,
+                        g4f.Provider.NoowAi, g4f.Provider.GPTalk, g4f.Provider.GptForLove,
+                        g4f.Provider.Phind, g4f.Provider.Bing, g4f.Provider.GeekGpt,
+                    ])
+                ),
+                messages=[{"role": "user", "content": ans}],
+                ignored=[""],
+                timeout=300,
+            )
+        except Exception as exc:
+            logger.error(exc)
+            await asyncio.sleep(300)
+            result = await Vivid.gpt35(ans)
+        logger.info(f'GPT-3.5/4 result:\n{result}')
         return result
 
     @staticmethod

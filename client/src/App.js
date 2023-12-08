@@ -7,7 +7,7 @@ function App() {
   const [sections, setSections] = useState([]);
   const [chaptersCount, setChaptersCount] = useState(4);
   const [chaptersLength, setChaptersLength] = useState(1500);
-  const [gptVersion, setGptVersion] = useState("3.5");
+  const [gptVersion, setGptVersion] = useState("3.7");
   const [genre, setGenre] = useState("");
   const [bookName, setBookName] = useState("");
   const [pregeneration, setPregeneration] = useState("");
@@ -18,7 +18,7 @@ function App() {
   const socketRef = useRef(null);
 
   useEffect(() => {
-    socketRef.current = new WebSocket('ws://127.0.0.1:8081/ws/');
+    socketRef.current = new WebSocket(`ws://localhost:${process.env.REACT_APP_WEBSOCKET_PORT}/ws/`);
 
     // Connection opened
     socketRef.current.addEventListener('open', function (event) {
@@ -227,6 +227,7 @@ function App() {
             <select id="gpt_version" name="gpt_version" value={gptVersion} onChange={(e) => setGptVersion(e.target.value)} disabled={step != 1}>
                 <option value="3">GPT-3</option>
                 <option value="3.5">GPT-3.5</option>
+                <option value="3.7">GPT-3.5/4</option>
                 <option value="4">GPT-4</option>
             </select>
         </div>
