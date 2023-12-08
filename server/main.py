@@ -189,7 +189,6 @@ async def generate_chapters_names_for_section(section: str, vivid_instance: Vivi
 
 
 async def generate_chapter(section: str, chapter: int, vivid_instance: Vivid, session_name: str):
-    # TODO: вывод процентов готовности на фронт
     chapters = vivid_instance.chapters.get(section)
     logger.info(f'The generation of the chapter "{chapters[chapter]}" has begun')
     chapter_text: str = await vivid_instance.generate_chapter(section, chapter, chapters)
@@ -349,7 +348,9 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect(session_name)
 
-print(settings.NODE_ENV)
+
 if __name__ == '__main__':
-    os.system(f"gunicorn {'server.' if settings.NODE_ENV != 'production' else ''}"
+    directory = 'server.' if settings.NODE_ENV != 'production' and \
+                             os.path.dirname(os.path.abspath(__file__)).split('/')[-1] != 'server' else ''
+    os.system(f"gunicorn {directory}"
               f"main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind=0.0.0.0:8077")

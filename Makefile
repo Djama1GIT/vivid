@@ -6,13 +6,13 @@ frontend-install:
 	cd client && npm install
 
 backend-install:
-	cd server && pip install -r requirements.txt
+	cd server && python3 -m venv venv && source venv/bin/activate && python3 -m pip install -r requirements.txt
 
 frontend-run:
 	cd client && npm run build && npm start
 
 backend-run:
-	python server/main.py
+	cd server && source venv/bin/activate && python3 main.py
 
 fr: frontend-run
 
