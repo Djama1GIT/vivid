@@ -1,6 +1,6 @@
-# Green
+# Vivid
 
-    Vivid is a AI book generation project based on FastAPI.
+Vivid is a AI book generation project based on FastAPI.
 
 ## Installation and Setup
 
@@ -22,7 +22,11 @@ or
 
 ```bash
 make install
+```
+```bash
 make frontend-run
+```
+```bash
 make backend-run
 ```
 
