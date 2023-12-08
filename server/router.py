@@ -221,7 +221,13 @@ class ConnectionManager:
                     "message": "Произошла ошибка, возможно Вы подключились к данной сессии через другое устройство.",
                 },
                 self.active_connections[session_name])
-            self.disconnect(session_name)
+            await self.send_json(
+                {
+                    "code": -1,
+                    "session": "",
+                },
+                self.active_connections[session_name])
+            await self.disconnect(session_name)
             logger.warning(f'Parallel connection session_name: {session_name}')
         await self.send_json(
             {
@@ -235,10 +241,17 @@ class ConnectionManager:
         logger.info(f'New connection established with session: {session_name}')
         return session_name
 
-    def disconnect(self, session_name: str):
+    async def disconnect(self, session_name: str):
         websocket = self.active_connections.pop(session_name, None)
         if websocket is not None:
-            websocket.close()
+            if session_name in self.active_connections:
+                await self.send_json(
+                    {
+                        "code": -1,
+                        "session": "",
+                    },
+                    self.active_connections[session_name])
+            await websocket.close()
         # self.vivid_instances.pop(session_name, None)
         logger.info(f'Connection with session {session_name} disconnected')
 
@@ -533,4 +546,4 @@ async def websocket_endpoint(websocket: WebSocket):
                 )
 
     except WebSocketDisconnect:
-        manager.disconnect(session_name)
+        await manager.disconnect(session_name)
