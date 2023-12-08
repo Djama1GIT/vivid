@@ -2,7 +2,7 @@
 
 Vivid is a AI book generation project based on FastAPI.
 
-## Installation and Setup
+## Installation and Setup <sup><sub>(tested on Linux)</sub></sup>
 
 1. Install Docker and Docker Compose if they are not already installed on your system.
 
@@ -18,7 +18,7 @@ cd vivid
 docker-compose up --build
 ```
 
-or
+or<sup>* (it is assumed that you also have npm and Python installed)</sup>
 
 ```bash
 make install
@@ -31,7 +31,11 @@ make backend-run
 ```
 
 ## User Interface
-Home page: http://localhost/
+Home page:
+
+http://localhost:3000/ (Make)
+
+or http://localhost/ (Docker)
 
 ## Technologies Used
 

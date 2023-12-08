@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styles from './App.css';
 
+import { changeURLParam } from './Utils';
+
 function App() {
   const [step, setStep] = useState(0);
   const [sectionsCount, setSectionsCount] = useState(3);
@@ -14,6 +16,10 @@ function App() {
   const [alreadyGeneratedChaptersCount, setAlreadyGeneratedChaptersCount] = useState(0);
   const [bookLink, setBookLink] = useState("");
 
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const urlParams = new URLSearchParams(window.location.search);
+
   // WebSocket instance variable
   const socketRef = useRef(null);
 
@@ -23,12 +29,18 @@ function App() {
     // Connection opened
     socketRef.current.addEventListener('open', function (event) {
       console.log("Connection opened");
+
+      socketRef.current.send(JSON.stringify({
+        session: urlParams.get('cache'),
+      }));
     });
 
     // Listen for messages
     socketRef.current.addEventListener('message', function (event) {
       const data = JSON.parse(event.data);
-      if (data.code == 1) {
+      if (data.code == -1) {
+        changeURLParam('cache', data.session);
+      } else if (data.code == 1) {
         setGenre(data.genre);
         setBookName(data.bookName);
         setChaptersCount(data.chaptersCount);
@@ -87,8 +99,9 @@ function App() {
        });
      } else if (data.code == 6) {
         setBookLink(data.link);
+     } else if (data.code == 418) {
+        setErrorMessage(data.message);
      }
-     console.log(sections);
      updateStep();
     });
 
@@ -111,10 +124,8 @@ function App() {
 
   const updateStep = () => {
     let temp_step = 1
-    console.log(sections);
     if ( sections[0] && temp_step >= 1 ) {
       temp_step = 2;
-      console.log(2);
     }
     if ( sections.some((section) => section.chapters.length > 0) && temp_step >= 2 ) {
       temp_step = 3;
@@ -200,7 +211,8 @@ function App() {
 
 
   return (
-    <div className="App">
+  <>
+    {!errorMessage ? <div className="App">
       <p className="step step1">1</p>
       <div className="form" disabled={step > 1}>
         <div className="selector">
@@ -348,8 +360,9 @@ function App() {
        </button> : "" }
    </div> : ""}
 
-
-   </div>
+   </div> : ""}
+   {errorMessage ? <div className="errorMessage">{errorMessage}</div> : ""}
+   </>
   );
 }
 

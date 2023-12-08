@@ -137,3 +137,17 @@ input:disabled, select:disabled, textarea:disabled, .disabled {
     text-decoration: none;
     color: #b33;
 }
+
+.errorMessage {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 60vh;
+    padding-top: 40vh;
+    font-size: 5em;
+    background-color: #000;
+    justify-content: center;
+    text-align: center;
+    overflow: hidden!important;
+}
