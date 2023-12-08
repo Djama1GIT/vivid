@@ -3,6 +3,8 @@ import re
 import time
 import uuid
 
+from starlette.websockets import WebSocketState
+
 from logger import logger
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -23,26 +25,31 @@ class ConnectionManager:
         await websocket.accept()
         try:
             cache = await websocket.receive_json()
-        except Exception as exc:
-            print(exc)
+        except Exception:
             cache = {"session": str(uuid.uuid4())}
         session_name = cache.get("session")
         pattern = re.compile(r'^[\da-f]{8}-([\da-f]{4}-){3}[\da-f]{12}$', re.IGNORECASE)
         if not session_name or not pattern.match(session_name):
-            session_name = uuid.uuid4()
-        logger.info(f"New connection established with session 12312312312312")
-        logger.info(self.active_connections.keys())
+            session_name = str(uuid.uuid4())
         if session_name in self.active_connections.keys():
             await self.send_json(
                 {
                     "code": 418,
-                    "message": "You have connected from another device",
+                    "message": "Произошла ошибка, возможно Вы подключились к данной сессии через другое устройство.",
                 },
                 self.active_connections[session_name])
+            await self.send_json(
+                {
+                    "code": -1,
+                    "session": "",
+                },
+                self.active_connections[session_name])
+            await self.disconnect(session_name)
+            logger.warning(f'Parallel connection session_name: {session_name}')
         await self.send_json(
             {
                 "code": -1,
-                "session": str(session_name),
+                "session": session_name,
             },
             websocket)
         self.active_connections[session_name] = websocket
@@ -51,8 +58,19 @@ class ConnectionManager:
         logger.info(f'New connection established with session: {session_name}')
         return session_name
 
-    def disconnect(self, session_name: str):
-        self.active_connections.pop(session_name, None)
+    async def disconnect(self, session_name: str):
+        websocket = self.active_connections.pop(session_name, None)
+        if websocket is not None and websocket.client_state is not WebSocketState.DISCONNECTED:
+            if session_name in self.active_connections:
+                await self.send_json(
+                    {
+                        "code": -1,
+                        "session": "",
+                    },
+                    self.active_connections[session_name])
+            await websocket.close()
+            del websocket
+        # self.vivid_instances.pop(session_name, None)
         logger.info(f'Connection with session {session_name} disconnected')
 
     @staticmethod
@@ -62,15 +80,17 @@ class ConnectionManager:
 
     @staticmethod
     async def send_json(data: dict, websocket: WebSocket):
-        await websocket.send_json(data)
-        logger.info(f'Sent JSON data: {data}')
+        if websocket.client_state is WebSocketState.CONNECTED:
+            await websocket.send_json(data)
+            logger.info(f'Sent JSON data: {data}')
+        else:
+            logger.error(f'The client has already disconnected')
 
     def get_vivid_instance(self, session_name: str):
         return self.vivid_instances.get(session_name, None)
 
 
 manager = ConnectionManager()
-
 manager.vivid_instances["3d56977b-8383-462b-a77c-645277bbd3bb"] = Vivid(chapters_length=500)
 _instance = {
     'genre': 'Фэнтези',
@@ -197,79 +217,6 @@ like Aldus PageMaker including versions of Lorem Ipsum.
 }
 for key in _instance:
     manager.vivid_instances["3d56977b-8383-462b-a77c-645277bbd3bb"].__dict__[key] = _instance[key]
-
-
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections: dict[str, WebSocket] = {}
-        self.vivid_instances: dict[str, Vivid] = {}
-
-    async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        try:
-            cache = await websocket.receive_json()
-        except Exception:
-            cache = {"session": str(uuid.uuid4())}
-        session_name = cache.get("session")
-        pattern = re.compile(r'^[\da-f]{8}-([\da-f]{4}-){3}[\da-f]{12}$', re.IGNORECASE)
-        if not session_name or not pattern.match(session_name):
-            session_name = str(uuid.uuid4())
-        if session_name in self.active_connections.keys():
-            await self.send_json(
-                {
-                    "code": 418,
-                    "message": "Произошла ошибка, возможно Вы подключились к данной сессии через другое устройство.",
-                },
-                self.active_connections[session_name])
-            await self.send_json(
-                {
-                    "code": -1,
-                    "session": "",
-                },
-                self.active_connections[session_name])
-            await self.disconnect(session_name)
-            logger.warning(f'Parallel connection session_name: {session_name}')
-        await self.send_json(
-            {
-                "code": -1,
-                "session": session_name,
-            },
-            websocket)
-        self.active_connections[session_name] = websocket
-        if session_name not in self.vivid_instances:
-            self.vivid_instances[session_name] = Vivid()  # Initialize Vivid with default parameters
-        logger.info(f'New connection established with session: {session_name}')
-        return session_name
-
-    async def disconnect(self, session_name: str):
-        websocket = self.active_connections.pop(session_name, None)
-        if websocket is not None:
-            if session_name in self.active_connections:
-                await self.send_json(
-                    {
-                        "code": -1,
-                        "session": "",
-                    },
-                    self.active_connections[session_name])
-            await websocket.close()
-        # self.vivid_instances.pop(session_name, None)
-        logger.info(f'Connection with session {session_name} disconnected')
-
-    @staticmethod
-    async def send_personal_message(message: str, websocket: WebSocket):
-        await websocket.send_text(message)
-        logger.info(f'Sent personal message: {message}')
-
-    @staticmethod
-    async def send_json(data: dict, websocket: WebSocket):
-        await websocket.send_json(data)
-        logger.info(f'Sent JSON data: {data}')
-
-    def get_vivid_instance(self, session_name: str):
-        return self.vivid_instances.get(session_name, None)
-
-
-manager = ConnectionManager()
 
 
 # manager.vivid_instances["aboba"] = Vivid(chapters_length=500)
