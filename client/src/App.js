@@ -18,7 +18,11 @@ function App() {
 
   const [errorMessage, setErrorMessage] = useState("");
 
+  const [socketState, setSocketState] = useState(true);
+  const CONNECTION_CLOSED = "Соединение с сервером потеряно. Попробуйте перезагрузить страницу.";
+
   const urlParams = new URLSearchParams(window.location.search);
+
 
   // WebSocket instance variable
   const socketRef = useRef(null);
@@ -29,7 +33,8 @@ function App() {
     // Connection opened
     socketRef.current.addEventListener('open', function (event) {
       console.log("Connection opened");
-
+      setSocketState(true);
+      setErrorMessage("");
       socketRef.current.send(JSON.stringify({
         session: urlParams.get('cache'),
       }));
@@ -109,6 +114,7 @@ function App() {
     // Connection closed
     socketRef.current.addEventListener('close', function (event) {
       console.log('Connection closed');
+      setSocketState(false);
     });
 
     // Connection error
@@ -163,6 +169,12 @@ function App() {
   useEffect(() => {
     updateStep();
   }, [sections, pregeneration, bookLink]);
+
+  useEffect(() => {
+    if (!socketState) {
+      setErrorMessage(socketState ? "" : (errorMessage ? errorMessage : CONNECTION_CLOSED));
+    }
+  }, [socketState]);
 
   const handleButtonClick = () => {
     socketRef.current.send(JSON.stringify({
@@ -361,7 +373,7 @@ function App() {
    </div> : ""}
 
    </div> : ""}
-   {errorMessage ? <div className="errorMessage">{errorMessage}</div> : ""}
+   <div className={`errorMessage ${(!socketState && errorMessage) ? 'show' : ''}`}>{errorMessage}</div>
    </>
   );
 }
