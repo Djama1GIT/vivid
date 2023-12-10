@@ -12,7 +12,10 @@ from config import settings
 
 from router import router
 
-app = FastAPI()
+app = FastAPI(
+    docs_url=None,
+    redoc_url=None,
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Разрешает все источники

@@ -123,10 +123,9 @@ async def generate_book(
 
 async def assemble_to_pdf(book: BookOfSessionBaseWithExtra, book_repository: BookRepository, session_name: str):
     logger.info(f'The saving the book "{book.book}" ({book.id}) in pdf has begun')
-    Vivid.save_book_to_file(
+    filename = Vivid.save_book_to_file(
         BookOfSessionBaseWithExtra(**book.__dict__)
     )
-    filename = f"/books/book-{book.id}-{book.book}.md"
     await book_repository.update_session(
         BookOfSessionBase(
             **book.__dict__ | {"filename": filename},

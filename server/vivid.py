@@ -116,7 +116,6 @@ class Vivid:
         logger.info(f'GPT-3.5 result:\n{result}')
         return result
 
-
     @staticmethod
     async def gpt35_andor_gpt4(ans):
         ans = ans.replace("\t", "").replace("  ", " ").replace("  ", " ").replace("   ", "")
@@ -175,6 +174,7 @@ class Vivid:
             chapter_text = ""
             async for text in Vivid.chapter_generator(book, section, chapter, chapters):
                 chapter_text += text
+            chapter_text = re.sub(r'(^(?!Глава\n).*?\.)\s*(.*)', '', chapter_text.strip()).strip()
             chapter_text = re.sub(r'[Кк]онец главы.*', '', chapter_text.strip()).strip()
             logger.info(f"Generated chapter: {chapter_text}")
 
@@ -201,8 +201,6 @@ class Vivid:
             sections = re.findall(Vivid.CHAPTER_OR_SECTION_PATTERN, "".join(_sections))
             logger.info(f"Generated sections: {sections}")
         return sections
-
-
 
     @staticmethod
     async def generate_chapters(book: BookOfSessionBaseWithExtra, section):
@@ -305,7 +303,6 @@ class Vivid:
                     y_position -= 20
                     c.setFont("DejaVuSerif", 12)
                     c.drawString(90, y_position, f"{i + 1}. {ch[1]}")
-                    
 
         # страницы с главами и их содержанием
         for idx, section in enumerate(book.sections_list):
@@ -341,4 +338,3 @@ class Vivid:
         c.save()
         logger.info(f"Книга {book.book}({book.id}) сохранена в файл {pdf_file_path}")
         return f"/{pdf_file_path}"
-

@@ -296,7 +296,7 @@ function App() {
       <p className="step">3</p>
       <p className="label">Названия глав</p>
       {sections.map((section, sectionIndex) => (
-        <div key={`section-${sectionIndex}`}>
+        <div key={`section-${sectionIndex}`} class={`section-${sectionIndex}`}>
           <p className="section-label">{section.name}</p>
           {section.chapters.map(([id, title, chapter], chapterIndex) => (
             <>
