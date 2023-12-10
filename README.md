@@ -46,3 +46,31 @@ or http://localhost/ (Docker)
 - SQLAlchemy - An Object-Relational Mapping (ORM) used in the project for working with the database.
 - Alembic - A database migration library used in the project to update the database structure when data models change.
 - Docker - A platform used in the project for creating, deploying, and managing containers, allowing the application to run in an isolated environment.
+
+
+## Contributors
+
+<table>
+  <tbody>
+    <tr>
+       <td align="center" valign="top" width="14.28%">
+        <a href="https://github.com/Djama1GIT">
+          <img src="https://avatars.githubusercontent.com/u/89941580?v=4?s=100" width="130px;" alt="Djama1GIT"/><br />
+          <sub><b>Djama1GIT</b></sub>
+        </a>
+      </td>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://github.com/valuevichslava">
+          <img src="https://avatars.githubusercontent.com/u/90149943?v=4?s=100" width="100px;" alt="valuevichslava"/><br />
+          <sub><b>valuevichslava</b></sub>
+        </a>
+      </td>
+      <td align="center" valign="top" width="14.28%">
+        <a href="https://github.com/Baroisyidi">
+          <img src="https://avatars.githubusercontent.com/u/96845788?v=4?s=100" width="100px;" alt="Baroisyidi"/><br />
+          <sub><b>Baroisyidi</b></sub>
+        </a>
+      </td>
+    </tr>
+  </tbody>
+</table>
