@@ -53,6 +53,7 @@ function App() {
         setSectionsCount(data.sectionsCount);
         setGptVersion(data.gptVersion);
         setPregeneration(data.pregeneration);
+        setBookLink(data.link)
 
         // set sections and chapters
         setSections(data.sections.map(([id, title]) => {
@@ -197,6 +198,7 @@ function App() {
         cmd: "confirm_sections",
         sections: sections,
     }));
+    setStep(2.5);
   };
 
   const handleChaptersButtonClick = () => {
@@ -204,6 +206,7 @@ function App() {
         cmd: "confirm_chapters",
         sections: sections,
     }));
+    setStep(3.5);
   };
 
   const handleDescriptionButtonClick = () => {
@@ -363,7 +366,7 @@ function App() {
                 Книга собирается в pdf...
             </div> : ""}
             {step == 5.3 ? <div>
-                Книга готова! Ссылка: <a href={bookLink}>клик</a>
+                Книга готова! Ссылка: <a href={bookLink} target="_blank" rel="noopener noreferrer">клик</a>
             </div> : ""}
         </div>
        </div>

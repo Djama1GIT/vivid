@@ -16,9 +16,9 @@ input:disabled, select:disabled, textarea:disabled, .disabled {
     border-radius: 4px;
 }
 .form {
-    margin-left: 20em;
-    margin-top: -12em;
-    width: 80em;
+    margin-left: 18.2%;
+    margin-top: -11%;
+    width: 72.8%;
     font-family: 'Montserrat', sans-serif;
 }
 .selector {
@@ -65,6 +65,36 @@ input:disabled, select:disabled, textarea:disabled, .disabled {
 .description, .sections, .chapters, .result {
     margin-top: 40em;
     text-align: left;
+}
+@media (max-width: 1500px) {
+    .step {
+        width: 20%;
+        font-size: 24em;
+        margin-bottom: -0.3em;
+    }
+    .step1 {
+        margin-top: 1em;
+        margin-bottom: -0.5em;
+    }
+    #book_name {
+        height: 2em;
+    }
+}
+@media (max-width: 800px) {
+    .step {
+        width: 10%;
+        font-size: 12em;
+    }
+}
+@media (max-width: 600px) {
+    .step {
+        width: 10%;
+        font-size: 8em;
+    }
+    .step1 {
+        margin-top: 1em;
+        margin-bottom: -0.4em;
+    }
 }
 .area-description, .section, .chapter, .area-results {
     margin-top: 4em;
@@ -137,7 +167,62 @@ input:disabled, select:disabled, textarea:disabled, .disabled {
     text-decoration: none;
     color: #b33;
 }
-
+@media (max-width: 1500px) {
+    .area-description, .section, .chapter, .area-results {
+        width:80%;
+    }
+}
+@media (max-width: 800px) {
+    .area-description, .section, .chapter, .area-results {
+        font-size: 8px;
+    }
+    #book_name {
+        font-size: 16px;
+    }
+    .section, .chapter {
+        width: 20%;
+        height: 2em;
+        font-size: 12px;
+        border: 2px solid;
+        border-image: linear-gradient(to right, red, orange) 1;
+        margin-left: 7em;
+    }
+    .label {
+        margin: 0;
+        margin-left: 5em;
+        color: #555;
+        line-height: 0;
+        text-align: left;
+    }
+    .section-label {
+        margin-top: 2em;
+        margin-bottom: 0;
+        margin-left: 5em;
+        color: #555;
+        line-height: 0;
+        text-align: left;
+    }
+    .area-description, .area-results {
+        margin-left: 5em;
+        margin-top: 1em;
+        text-align: left;
+    }
+    .area-results {
+        height: 3em;
+        outline: none;
+        color: #FAFAFA;
+        font-size: 60px;
+        text-align: center;
+        line-height: 3;
+        margin-top: 1em;
+        margin-left: 6em;
+    }
+    .sections, .chapters {
+        margin-top: 10em;
+    }
+}
+@media (max-width: 600px) {
+}
 .errorMessage {
     position: absolute;
     top: 0;
@@ -153,7 +238,9 @@ input:disabled, select:disabled, textarea:disabled, .disabled {
     opacity: 0;
     transition: opacity 1.5s ease-in-out;
     transition-delay: 0.5s;
+    z-index: -1;
 }
 .errorMessage.show {
     opacity: 1;
+    z-index: 999;
 }

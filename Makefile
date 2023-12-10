@@ -12,7 +12,7 @@ frontend-run:
 	cd client && npm run build && npm start
 
 backend-run:
-	cd server && source venv/bin/activate && python3 main.py
+	cd server && source venv/bin/activate && python -m alembic upgrade head && python3 main.py
 
 fr: frontend-run
 
