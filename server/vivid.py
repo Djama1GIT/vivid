@@ -1,5 +1,4 @@
 import asyncio
-import os
 import re
 
 import g4f
@@ -7,6 +6,12 @@ import g4f
 from utils.logger import logger
 
 from schemas import BookOfSessionBaseWithExtra
+
+from reportlab.pdfgen import canvas
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.lib.utils import simpleSplit
+from reportlab.lib.pagesizes import letter
 
 
 class Vivid:
@@ -111,6 +116,7 @@ class Vivid:
         logger.info(f'GPT-3.5 result:\n{result}')
         return result
 
+
     @staticmethod
     async def gpt35_andor_gpt4(ans):
         ans = ans.replace("\t", "").replace("  ", " ").replace("  ", " ").replace("   ", "")
@@ -196,6 +202,8 @@ class Vivid:
             logger.info(f"Generated sections: {sections}")
         return sections
 
+
+
     @staticmethod
     async def generate_chapters(book: BookOfSessionBaseWithExtra, section):
         chapters = []
@@ -260,35 +268,77 @@ class Vivid:
         yield result
 
     @staticmethod
-    def save_book_to_file(self):
-        try:
-            os.remove(f"books/book-{self.id}-{self.book}.md")
-        except:
-            ...
+    def save_book_to_file(book):
+        pdf_file_path = f'books/book-{book.id}-{book.book}.pdf'
+        c = canvas.Canvas(pdf_file_path, pagesize=letter)
+        pdfmetrics.registerFont(TTFont('DejaVuSerif', 'DejaVuSerif.ttf'))
 
-        # temporarily, and then it will save books in pdf
-        # TODO
-        with open(f'books/book-{self.id}-{self.book}.md', 'a') as file:
-            file.write(f"## {self.book}\n\nСодержание:\n")
-            for idx, section in enumerate(self.sections_list):
-                file.write(f"#### Раздел №{idx + 1}. {section[1]}\n")
-                for i, ch in enumerate(self.chapters[section[1]]):
-                    file.write(f"       {i + 1}. {ch[1]}\n")
-            file.write("\n")
+        # Задаем размеры страницы
+        width, height = letter
 
-            for section in self.sections_list:
-                file.write(f"## {section[1]}\n")
-                for ch in self.chapters[section[1]]:
-                    file.write(f"### {ch[1]}\n")
-                    chapter = [[]]
-                    for sentence in ch[2].split('\n\n')[1:]:
-                        for word in sentence.split():
-                            chapter[-1].append(word)
-                            if sum(len(word) for word in chapter[-1]) > 80:
-                                chapter.append([])
-                    for line in chapter:
-                        for word in line:
-                            file.write(f"{word} ")
-                        file.write('\n')
-                    file.write('\n')
-            logger.info(f"Книга {self.book}({self.id}) сохранена в файл")
+        # Добавляем список разделов и глав на титульный лист
+        c.setFont("DejaVuSerif", 18)
+        c.drawString(50, height - 20, f"Книга: {book.book}")
+        c.setFont("DejaVuSerif", 16)
+        c.drawString(50, height - 50, "Содержание:")
+        y_position = height - 70
+
+        for idx, section in enumerate(book.sections_list):
+            y_position -= 20
+            c.setFont("DejaVuSerif", 14)
+            c.drawString(70, y_position, f"Раздел №{idx + 1}. {section[1]}")
+
+            for i, ch in enumerate(book.chapters[section[1]]):
+                y_position -= 14
+                c.setFont("DejaVuSerif", 12)
+                c.drawString(90, y_position, f"{i + 1}. {ch[1]}")
+
+                # Проверяем, достигли ли конца страницы
+                if y_position < 100:
+                    c.showPage()
+                    c.setFont("DejaVuSerif", 16)
+                    c.drawString(50, height - 50, "Содержание:")
+                    y_position = height - 70
+
+                    c.setFont("DejaVuSerif", 14)
+                    c.drawString(70, y_position, f"Раздел №{idx + 1}. {section[1]}")
+                    y_position -= 20
+                    c.setFont("DejaVuSerif", 12)
+                    c.drawString(90, y_position, f"{i + 1}. {ch[1]}")
+                    
+
+        # страницы с главами и их содержанием
+        for idx, section in enumerate(book.sections_list):
+            c.showPage()
+            y_position = height - 70
+            c.setFont("DejaVuSerif", 16)
+            c.drawString(70, y_position, f"Раздел №{idx + 1}. {section[1]}")
+
+            for i, ch in enumerate(book.chapters[section[1]]):
+                y_position -= 14
+                if y_position < 100:
+                    c.showPage()
+                    y_position = height - 70
+                font_name = "DejaVuSerif"
+                font_size = 14
+                c.setFont(font_name, font_size)
+                c.drawString(80, y_position, f"{i + 1}. {ch[1]}")
+
+                if len(ch) > 2:  # Проверяем наличие текста главы
+                    chapter = '\n\n'.join(ch[2].split('\n\n')[0:]).strip()
+                    lines = simpleSplit(chapter, font_name, font_size, width - 100)
+
+                    y_position -= 14
+                    for line in lines:
+                        y_position -= 12
+                        if y_position < 100:
+                            c.showPage()
+                            y_position = height - 70
+                        c.setFont("DejaVuSerif", 12)
+                        c.drawString(90, y_position, line)
+                    y_position -= 14
+
+        c.save()
+        logger.info(f"Книга {book.book}({book.id}) сохранена в файл {pdf_file_path}")
+        return f"/{pdf_file_path}"
+
