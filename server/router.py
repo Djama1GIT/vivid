@@ -23,133 +23,6 @@ router = APIRouter(
 manager = ConnectionManager()
 
 
-# manager.content_instances["3d56977b-8383-462b-a77c-645277bbd3bb"] = Vivid(chapters_length=500)
-# _instance = {
-#     'genre': 'Фэнтези',
-#     'book': 'Абоба',
-#     'SECTIONS_COUNT': 2,
-#     # 'SECTIONS_COUNT': 3,
-#     'sections': [
-#         (1, 'Путешествия сквозь Абобу'),
-#         (2, 'Загадки и тайны Абобы'),
-#         # (3, 'Сражения и судьбы в мире Абобы')
-#     ],
-#     'CHAPTERS_COUNT': 2,
-#     # 'CHAPTERS_COUNT': 4,
-#     'chapters': {
-#         'Путешествия сквозь Абобу': [
-#             ['1', 'Непроглядные тропы Абобы',
-#              """
-# Эльриан стоял на пороге Долины Вечной Тени, ощущая волнение и тревогу. Он знал, что перед ним длинный и опасный путь через загадочную Абобу, где каждый шаг мог оказаться ловушкой или испытанием. Но судьба принесла ему эту миссию - спасти Абобу от темных сил, жаждущих власти.
-#
-# Первые шаги в лес Забытых Снов были полны тайны и магии. Древние деревья шептали свои загадки, а изумрудные огоньки искрились вокруг, создавая впечатление, что время здесь не имеет значения. Эльриан продолжал свое путешествие, уверенный в своей силе и важности его задачи.
-#
-# Придя к Серебряному фонтану, Эльриан обнаружил странный ключ, который подсказал ему дальнейший путь. Он открыл Храм Перевернутой Звезды и сразу почувствовал власть, которая окутывала это место. Там он встретил загадочную рассветную деву Айлин, которая обладала необычными способностями и знала многое о предстоящей битве.
-#
-# Эльриану потребовалось все его мастерство волшебника, чтобы пройти через Башню Последнего Вздоха. Это было испытание для его силы и ума, но он смог справиться с ним благодаря своей настойчивости и решимости.
-#
-# В пещере Забытых Молитв Эльриан обнаружил старого мудреца Каладора, который являлся хранителем не только Долины Вечной Тени, но и тайн Абобы. Каладор рассказал ему о древнем артефакте "Ключи Времени" и о легенде Великого Волшебника, который мог спасти Абобу от гибели.
-#
-# Направляясь к Горе Возрождения, Эльриан и его верные спутники - отважный воин Леонард и хитрая ведьма Иллиана - понимали, что перед ними огромная битва за власть над Абобой. Они должны найти Зал Зеркал Времени, чтобы разгадать пророчество и спасти мир.
-#
-# Так началось путешествие сквозь Абобу, полное опасностей и тайн. Впереди ждали непроглядные тропы и испытания, но Эльриан и его команда были готовы пройти через все, чтобы вернуть мир к свету и благополучию.
-#              """
-#              ],
-#             ['2', 'Охота на магический источник Великой Реки', """
-# 12312312
-#
-# 1231231
-#             """],
-#             # ['3', 'Подземелья таинственного Храма Забытых Руин'],
-#             # ['4', 'Встреча с Древним Драконом Горных Вершин']
-#         ],
-#         'Загадки и тайны Абобы': [
-#             ['1', "Загадки затерянного леса", """
-# Lorem Ipsum is simply dummy text of the printing and typesetting industry.
-#
-# Lorem Ipsum has been the industry's standard dummy text ever since the 1500s,
-#
-# when an unknown printer took a galley of type and scrambled it to make a type specimen book.
-#
-# It has survived not only five centuries, but also the leap into electronic typesetting,
-#
-# remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset
-#
-# sheets containing Lorem Ipsum passages, and more recently with desktop publishing software
-#
-# like Aldus PageMaker including versions of Lorem Ipsum.
-#             """],
-#             ['2', "Тайна магического амулета", """
-# Lorem Ipsum is simply dummy text of the printing and typesetting industry.
-#
-# Lorem Ipsum has been the industry's standard dummy text ever since the 1500s,
-#
-# when an unknown printer took a galley of type and scrambled it to make a type specimen book.
-#
-# It has survived not only five centuries, but also the leap into electronic typesetting,
-#
-# remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset
-#
-# sheets containing Lorem Ipsum passages, and more recently with desktop publishing software
-#
-# like Aldus PageMaker including versions of Lorem Ipsum.
-#             """],
-#             # ['3', "Секреты древнего храма Абобы"],
-#             # ['4', "Погоня за пропавшей мудростью"]
-#         ],
-#         # 'Сражения и судьбы в мире Абобы': [
-#         #     ['1', 'Под покровом тьмы'],
-#         #     ['2', 'Вихрь страстей'],
-#         #     ['3', 'Символы судьбы'],
-#         #     ['4', 'Пробуждение героев']
-#         # ]
-#     },
-#     'CHAPTERS_LENGTH': 500,
-#     'pregeneration': 'Основные сюжетные места/темы/имена/названия мест/имена '
-#                      'героев (если уместно в данной книге):'
-#                      '\n\nСюжетные места:\n'
-#                      '1. Долина Вечной Тени\n'
-#                      '2. Город Сияющих Башен\n'
-#                      '3. Лес Забытых Снов\n'
-#                      '4. Остров Потерянных Чудес\n'
-#                      '5. Гора Возрождения\n\n'
-#                      'Темы:\n'
-#                      '1. Магический артефакт "Ключи Времени"\n'
-#                      '2. Пророчества и предсказания\n'
-#                      '3. Загадочная рассветная дева\n'
-#                      '4. Затерянная легенда о Великом Волшебнике\n'
-#                      '5. Битва за власть над Абобой\n\n'
-#                      'Имена героев:\n'
-#                      '1. Эльриан - юный волшебник, '
-#                      'избранный судьбой для спасения Абобы\n'
-#                      '2. Айлин - загадочная рассветная дева, '
-#                      'обладающая необычными способностями\n'
-#                      '3. Каладор - старый мудрец и '
-#                      'хранитель Долины Вечной Тени\n'
-#                      '4. Леонард - отважный воин, '
-#                      'стремящийся разгадать загадки Абобы\n'
-#                      '5. Иллиана - хитрая ведьма, ставшая соперницей '
-#                      'Эльриана в битве за власть\n\n'
-#                      'Названия мест:\n'
-#                      '1. Серебряный фонтан\n'
-#                      '2. Храм Перевернутой Звезды\n'
-#                      '3. Башня Последнего Вздоха\n'
-#                      '4. Пещера Забытых Молитв\n'
-#                      '5. Зал Зеркал Времени\n\n'
-#                      'Книга "Абоба" - это захватывающий рассказ о '
-#                      'приключениях юного волшебника Эльриана,'
-#                      ' который отправляется в путешествие сквозь '
-#                      'загадочную и опасную Абобу. '
-#                      'В этом мире он сталкивается с тайнами и загадками, '
-#                      'преследуемыми злыми силами и сражается '
-#                      'за судьбу всего мира. Вместе со своими спутниками, '
-#                      'Эльриану предстоит раскрыть запутанные загадки Абобы, '
-#                      'найти древний артефакт и разгадать пророчество, '
-#                      'чтобы спасти мир от неминуемой гибели.'
-# }
-# for key in _instance:
-#     manager.content_instances["3d56977b-8383-462b-a77c-645277bbd3bb"].__dict__[key] = _instance[key]
-
 async def generate_chapters_names_for_section(
         section: str,
         book: BookOfSessionBaseWithExtra,
@@ -236,7 +109,7 @@ async def generate_book(
         tasks = []
         for i in range(len(book.chapters.get(section))):
             task = asyncio.create_task(
-                generate_chapter(  # TODO
+                generate_chapter(
                     section,
                     i,
                     book,
@@ -252,7 +125,7 @@ async def assemble_to_pdf(book: BookOfSessionBaseWithExtra, book_repository: Boo
     logger.info(f'The saving the book "{book.book}" ({book.id}) in pdf has begun')
     Vivid.save_book_to_file(
         BookOfSessionBaseWithExtra(**book.__dict__)
-    )  # TODO
+    )
     filename = f"/books/book-{book.id}-{book.book}.md"
     await book_repository.update_session(
         BookOfSessionBase(
@@ -270,10 +143,10 @@ async def assemble_to_pdf(book: BookOfSessionBaseWithExtra, book_repository: Boo
 
 async def serialize_chapters(sections, sections_list, session):
     indexes = list(
-                {
-                    idx: sec for idx, sec in sections_list
-                }.values()
-            )
+        {
+            idx: sec for idx, sec in sections_list
+        }.values()
+    )
     return {
         (_s := await section.json(session))["name"]: _s.get("chapters", [])
         for section in sorted(
@@ -375,7 +248,7 @@ async def websocket_endpoint(
                                         BookOfSessionBaseWithExtra(**book_of_session.__dict__),
                                         book_repository,
                                         session_name
-                                    )  # TODO save chapters_list
+                                    )
                                 )
                     case "confirm_chapters":
                         logger.info(f'Command confirm_chapters executed with sections: {data.get("sections")}')
