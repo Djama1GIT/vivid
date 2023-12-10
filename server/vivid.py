@@ -284,12 +284,22 @@ class Vivid:
         for idx, section in enumerate(book.sections_list):
             y_position -= 20
             c.setFont("DejaVuSerif", 14)
-            c.drawString(70, y_position, f"Раздел №{idx + 1}. {section[1]}")
+            section_lines = f"Раздел №{idx + 1}. {section[1]}"
+            sec_lines = simpleSplit(section_lines, c.fontname, c._fontsize, width-100)
+            for line in sec_lines:
+                c.drawString(70, y_position, line)
+                y_position -= 14
+            #c.drawString(70, y_position, f"Раздел №{idx + 1}. {section[1]}")
 
             for i, ch in enumerate(book.chapters[section[1]]):
                 y_position -= 14
                 c.setFont("DejaVuSerif", 12)
-                c.drawString(90, y_position, f"{i + 1}. {ch[1]}")
+                chapter_lines = f"{i + 1}. {ch[1]}"
+                ch_lines = simpleSplit(chapter_lines, c.fontname, c._fontsize, width-100)
+                for line in ch_lines:
+                    c.drawString(90, y_position, line)
+                    y_position -= 14
+                #c.drawString(90, y_position, f"{i + 1}. {ch[1]}")
 
                 # Проверяем, достигли ли конца страницы
                 if y_position < 100:
@@ -299,17 +309,28 @@ class Vivid:
                     y_position = height - 70
 
                     c.setFont("DejaVuSerif", 14)
-                    c.drawString(70, y_position, f"Раздел №{idx + 1}. {section[1]}")
+                    for line in sec_lines:
+                        c.drawString(70, y_position, line)
+                        y_position -= 14
+                    #c.drawString(70, y_position, f"Раздел №{idx + 1}. {section[1]}")
                     y_position -= 20
                     c.setFont("DejaVuSerif", 12)
-                    c.drawString(90, y_position, f"{i + 1}. {ch[1]}")
+                    for line in ch_lines:
+                        c.drawString(90, y_position, line)
+                        y_position -= 14
+                    #c.drawString(90, y_position, f"{i + 1}. {ch[1]}")
 
         # страницы с главами и их содержанием
         for idx, section in enumerate(book.sections_list):
             c.showPage()
             y_position = height - 70
             c.setFont("DejaVuSerif", 16)
-            c.drawString(70, y_position, f"Раздел №{idx + 1}. {section[1]}")
+            section_lines = f"Раздел №{idx + 1}. {section[1]}"
+            sec_lines = simpleSplit(section_lines, c.fontname, c._fontsize, width - 100)
+            for line in sec_lines:
+                c.drawString(70, y_position, line)
+                y_position -= 14
+            #c.drawString(70, y_position, f"Раздел №{idx + 1}. {section[1]}")
 
             for i, ch in enumerate(book.chapters[section[1]]):
                 y_position -= 14
@@ -319,7 +340,12 @@ class Vivid:
                 font_name = "DejaVuSerif"
                 font_size = 14
                 c.setFont(font_name, font_size)
-                c.drawString(80, y_position, f"{i + 1}. {ch[1]}")
+                chapter_lines = f"{i + 1}. {ch[1]}"
+                ch_lines = simpleSplit(chapter_lines, c.fontname, c._fontsize, width - 100)
+                for line in ch_lines:
+                    c.drawString(90, y_position, line)
+                    y_position -= 14
+                #c.drawString(80, y_position, f"{i + 1}. {ch[1]}")
 
                 if len(ch) > 2:  # Проверяем наличие текста главы
                     chapter = '\n\n'.join(ch[2].split('\n\n')[0:]).strip()
