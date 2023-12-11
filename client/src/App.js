@@ -228,6 +228,7 @@ function App() {
   return (
   <>
     {!errorMessage ? <div className="App">
+      <a className="logo" href="/">Vivid</a>
       <p className="step step1">1</p>
       <div className="form" disabled={step > 1}>
         <div className="selector">
@@ -252,10 +253,10 @@ function App() {
 
         <div className="selector">
             <select id="gpt_version" name="gpt_version" value={gptVersion} onChange={(e) => setGptVersion(e.target.value)} disabled={step != 1}>
-                <option value="3">GPT-3</option>
+                <option value="3.0">GPT-3</option>
                 <option value="3.5">GPT-3.5</option>
                 <option value="3.7">GPT-3.5/4</option>
-                <option value="4">GPT-4</option>
+                <option value="4.0">GPT-4</option>
             </select>
         </div>
 
@@ -334,7 +335,8 @@ function App() {
           ))}
         </div>
       ))}
-      {step == 3 ? <button id="confirmChapters" onClick={handleChaptersButtonClick}>Подтвердить</button> : "" }
+      {(step == 3 && sections.every((section) => section.chapters.length > 0) ) ?
+      <button id="confirmChapters" onClick={handleChaptersButtonClick}>Подтвердить</button> : "" }
     </div> : ""}
 
 

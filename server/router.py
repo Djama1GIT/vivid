@@ -155,6 +155,16 @@ async def serialize_chapters(sections, sections_list, session):
     }
 
 
+async def get_book_with_extra(session_name: uuid.UUID, book_repository: BookRepository):
+    book_of_session: BookOfSessionBaseWithExtra = await book_repository.get_session(session_name)
+    if not book_of_session:
+        return None
+    sections = await book_repository.session.run_sync(lambda s: book_of_session.sections)
+    chapters = await serialize_chapters(sections, book_of_session.sections_list, book_repository.session)
+    book_of_session.chapters = chapters
+    return book_of_session
+
+
 @router.websocket("/ws/")
 async def websocket_endpoint(
         websocket: WebSocket,
@@ -162,11 +172,9 @@ async def websocket_endpoint(
 ):
     session_name = await manager.connect(websocket)
     logger.info(f'Websocket endpoint connected with session: {session_name}')
-    book_of_session: BookOfSessionBaseWithExtra = await book_repository.get_session(session_name)
+    book_of_session: BookOfSessionBaseWithExtra = await get_book_with_extra(session_name, book_repository)
     if book_of_session:
         # Send initial data from Vivid instance as JSON
-        sections = await book_repository.session.run_sync(lambda s: book_of_session.sections)
-        chapters = await serialize_chapters(sections, book_of_session.sections_list, book_repository.session)
         await manager.send_json(
             {
                 "code": 1,
@@ -175,7 +183,7 @@ async def websocket_endpoint(
                 "sectionsCount": book_of_session.sections_count,
                 "sections": book_of_session.sections_list,
                 "chaptersCount": book_of_session.chapters_count,
-                "chapters": chapters,
+                "chapters": book_of_session.chapters,
                 "chaptersLength": book_of_session.chapters_length,
                 "gptVersion": book_of_session.v,
                 "pregeneration": book_of_session.pregeneration,
@@ -184,7 +192,6 @@ async def websocket_endpoint(
             },
             websocket,
         )
-        book_of_session.chapters = chapters
     try:
         while manager.active_connections.get(session_name) is not None:
             data = await websocket.receive_json()
@@ -224,13 +231,14 @@ async def websocket_endpoint(
                                 "Произошла ошибка сервера"
                             )
                             await websocket.close()
-                        await manager.send_json(
-                            {
-                                "code": 2,
-                                "sections": book_of_session.sections_list,
-                            },
-                            websocket
-                        )
+                        else:
+                            await manager.send_json(
+                                {
+                                    "code": 2,
+                                    "sections": book_of_session.sections_list,
+                                },
+                                websocket
+                            )
                     case "confirm_sections":
                         logger.info(f'Command confirm_sections executed with sections: {data.get("sections")}')
                         if "sections" in data:
@@ -291,9 +299,10 @@ async def websocket_endpoint(
                         )
                     case "assemble_to_pdf":
                         logger.info(f'Command assemble_to_pdf executed')
+                        book = await get_book_with_extra(session_name, book_repository)
                         asyncio.get_running_loop().create_task(
                             assemble_to_pdf(
-                                BookOfSessionBaseWithExtra(**book_of_session.__dict__),
+                                BookOfSessionBaseWithExtra(**book.__dict__),
                                 book_repository,
                                 session_name,
                             )
@@ -301,12 +310,6 @@ async def websocket_endpoint(
 
             elif not book_of_session:
                 logger.warning(f'Instance does not exist')
-                await manager.send_json(
-                    {
-                        "message": "Instance does not exist",
-                    },
-                    websocket
-                )
 
     except WebSocketDisconnect:
         await manager.disconnect(session_name)

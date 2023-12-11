@@ -10,9 +10,9 @@ input, select, textarea {
     font-family: 'Montserrat', sans-serif;
 }
 input:disabled, select:disabled, textarea:disabled, .disabled {
-    color: #fff;
+    color: #FAFAFA;
     font-weight: 500;
-    background-color: #555;
+    background-color: #2a2a2a;
     border: none!important;
     border-radius: 4px;
 }
@@ -61,7 +61,7 @@ input:disabled, select:disabled, textarea:disabled, .disabled {
     font-weight: bold;
 }
 .step1 {
-    margin-top: 0.8em;
+    margin-top: 0.7em;
 }
 .description, .sections, .chapters, .result {
     margin-top: 40em;
@@ -74,7 +74,7 @@ input:disabled, select:disabled, textarea:disabled, .disabled {
         margin-bottom: -0.3em;
     }
     .step1 {
-        margin-top: 1em;
+        margin-top: 0.8em;
         margin-bottom: -0.5em;
     }
     #book_name {
@@ -99,7 +99,7 @@ input:disabled, select:disabled, textarea:disabled, .disabled {
         font-size: 8em;
     }
     .step1 {
-        margin-top: 1em;
+        margin-top: 0.8em;
         margin-bottom: -0.4em;
     }
     body {
@@ -357,4 +357,11 @@ input:disabled, select:disabled, textarea:disabled, .disabled {
 .errorMessage.show {
     opacity: 1;
     z-index: 999;
+}
+.logo {
+    text-decoration: none;
+    color: white;
+    font-weight: 700;
+    font-size: 6vh;
+    margin-left: 4vh;
 }

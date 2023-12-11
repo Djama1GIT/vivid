@@ -30,6 +30,7 @@ class Session(Base):
             "pregeneration": self.pregeneration,
             "sections_list": self.sections_list or [],
             "sections": self.sections,
+            "filename": self.filename,
         }
 
 

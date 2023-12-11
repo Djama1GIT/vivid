@@ -82,11 +82,11 @@ class Vivid:
 
     @staticmethod
     def gpt(ans, v):
-        if str(v) == "3.5":
+        if str(v) in ["3.5", "3.0", "3"]:
             return Vivid.gpt35(ans)
         elif str(v) == "3.7":
             return Vivid.gpt35_andor_gpt4(ans)
-        elif str(v) == "4.0":
+        elif str(v) in ["4.0", "4"]:
             return Vivid.gpt4(ans)
         else:
             raise ValueError(f'Invalid GPT Version - {v}')
@@ -174,8 +174,25 @@ class Vivid:
             chapter_text = ""
             async for text in Vivid.chapter_generator(book, section, chapter, chapters):
                 chapter_text += text
+            temp_chapter_text = re.findall(r'```([\s\S]*?)```', chapter_text)
+            if temp_chapter_text and len(temp_chapter_text[0]) > book.chapters_length * 0.5:
+                chapter_text = temp_chapter_text[0].strip()
+            chapter_text = re.sub(r'\nГлава .?\d.*', '', chapter_text)
+            chapter_text = re.sub(r'\nЭта глава .*', '', chapter_text)
+            # chapter_text = re.sub(r'Эта глава посвящена.*', '', chapter_text)  ### проверка на уничтожение
+            # chapter_text = re.sub(r'В (этой|следующей) главе.*', '', chapter_text)  ### проверка на уничтожение
+            chapter_text = re.sub(r'\nВ этой главе .*', '', chapter_text)
+            chapter_text = re.sub(r'\nВ следующей главе .*', '', chapter_text)
             chapter_text = re.sub(r'(^(?!Глава\n).*?\.)\s*(.*)', '', chapter_text.strip()).strip()
             chapter_text = re.sub(r'[Кк]онец главы.*', '', chapter_text.strip()).strip()
+            chapter_text = re.sub(r'Эта глава.*', '', chapter_text.strip()).strip()
+            chapter_text = re.sub('<.*?>', '', chapter_text.strip()).strip()
+            chapter_text = re.sub(r'#{2,}', '', chapter_text.strip()).strip()
+            chapter_text = re.sub(r'\*{2,}', '', chapter_text.strip()).strip()
+            if '\n\n' in chapter_text:
+                chapter_text = chapter_text.replace('\n\n', '\n\n\u2800\n\n')
+            else:
+                chapter_text = chapter_text.replace('\n', '\n\n\u2800\n\n')
             logger.info(f"Generated chapter: {chapter_text}")
 
         return chapter_text
@@ -269,97 +286,125 @@ class Vivid:
     def save_book_to_file(book):
         pdf_file_path = f'books/book-{book.id}-{book.book}.pdf'
         c = canvas.Canvas(pdf_file_path, pagesize=letter)
-        pdfmetrics.registerFont(TTFont('DejaVuSerif', 'DejaVuSerif.ttf'))
+        c.setTitle(book.book)
+
+        font_name = "DejaVuSerif"
+        pdfmetrics.registerFont(TTFont(font_name, f'{font_name}.ttf'))
 
         # Задаем размеры страницы
         width, height = letter
 
+        # Задаем Размеры шрифтов
+        font_sizes = {
+            "title": 28,
+            "genre": 14,
+            "table_title": 16,
+            "section_title": 14,
+            "chapter_text": 14,
+            "chapter_title": 12,
+        }
+
+        line_spacing = {
+            "section_title": 14,
+            "chapter_title": 12,
+            "chapter_text": 12,
+        }
+
         # Добавляем список разделов и глав на титульный лист
-        c.setFont("DejaVuSerif", 18)
-        c.drawString(50, height - 20, f"Книга: {book.book}")
-        c.setFont("DejaVuSerif", 16)
+        c.setFont(font_name, font_sizes["title"] * font_sizes["title"] / len(book.book))
+        # c.drawString(50, height - 20, f"{book.book}")
+        c.drawCentredString(width // 2, height // 2 + 60, f"{book.book}")
+        c.setFont(font_name, font_sizes["genre"] * font_sizes["genre"] / len(book.genre))
+        c.drawCentredString(width // 2, height // 2 + 30, f"{book.genre}")
+        c.setFont(font_name, font_sizes["chapter_title"])
+        c.drawString(30, 50, f"Сгенерировано AI")
+        c.drawString(30, 30, f"Авторы: Гаджиявов Джамал, Валуевич Вячеслав, Ибрагим Баро")
+        c.showPage()
+        c.setFont(font_name, font_sizes["table_title"])
         c.drawString(50, height - 50, "Содержание:")
         y_position = height - 70
 
         for idx, section in enumerate(book.sections_list):
-            y_position -= 20
-            c.setFont("DejaVuSerif", 14)
+            if y_position < 140:
+                c.showPage()
+                c.setFont(font_name, font_sizes["table_title"])
+                c.drawString(50, height - 50, "Содержание:")
+                y_position = height - 70
+            y_position -= line_spacing["section_title"]
+            c.setFont(font_name, font_sizes["section_title"])
             section_lines = f"Раздел №{idx + 1}. {section[1]}"
-            sec_lines = simpleSplit(section_lines, c.fontname, c._fontsize, width-100)
+            sec_lines = simpleSplit(section_lines, font_name, font_sizes["section_title"], width - 100)
             for line in sec_lines:
                 c.drawString(70, y_position, line)
-                y_position -= 14
-            #c.drawString(70, y_position, f"Раздел №{idx + 1}. {section[1]}")
+                y_position -= line_spacing["chapter_title"]  # crutch (it's not chapter title)
+            # c.drawString(70, y_position, f"Раздел №{idx + 1}. {section[1]}")
 
             for i, ch in enumerate(book.chapters[section[1]]):
-                y_position -= 14
-                c.setFont("DejaVuSerif", 12)
+                y_position -= line_spacing["chapter_title"]
+                c.setFont(font_name, font_sizes["chapter_title"])
                 chapter_lines = f"{i + 1}. {ch[1]}"
-                ch_lines = simpleSplit(chapter_lines, c.fontname, c._fontsize, width-100)
-                for line in ch_lines:
-                    c.drawString(90, y_position, line)
-                    y_position -= 14
-                #c.drawString(90, y_position, f"{i + 1}. {ch[1]}")
+                ch_lines = simpleSplit(chapter_lines, font_name, font_sizes["chapter_title"], width - 100)
 
-                # Проверяем, достигли ли конца страницы
-                if y_position < 100:
+                if y_position >= 100:
+                    for line in ch_lines:
+                        c.drawString(90, y_position, line)
+                        y_position -= line_spacing["chapter_title"]
+                else:
                     c.showPage()
-                    c.setFont("DejaVuSerif", 16)
+                    c.setFont(font_name, font_sizes["table_title"])
                     c.drawString(50, height - 50, "Содержание:")
                     y_position = height - 70
 
-                    c.setFont("DejaVuSerif", 14)
+                    c.setFont(font_name, font_sizes["section_title"])
                     for line in sec_lines:
                         c.drawString(70, y_position, line)
-                        y_position -= 14
-                    #c.drawString(70, y_position, f"Раздел №{idx + 1}. {section[1]}")
-                    y_position -= 20
-                    c.setFont("DejaVuSerif", 12)
+                        y_position -= line_spacing["chapter_title"]
+                    # c.drawString(70, y_position, f"Раздел №{idx + 1}. {section[1]}")
+                    y_position -= line_spacing["section_title"]
+                    c.setFont(font_name, font_sizes["chapter_title"])
                     for line in ch_lines:
                         c.drawString(90, y_position, line)
-                        y_position -= 14
-                    #c.drawString(90, y_position, f"{i + 1}. {ch[1]}")
+                        y_position -= line_spacing["chapter_title"]
+                    # c.drawString(90, y_position, f"{i + 1}. {ch[1]}")
 
         # страницы с главами и их содержанием
         for idx, section in enumerate(book.sections_list):
             c.showPage()
             y_position = height - 70
-            c.setFont("DejaVuSerif", 16)
+            c.setFont(font_name, font_sizes["section_title"] + 2)
             section_lines = f"Раздел №{idx + 1}. {section[1]}"
-            sec_lines = simpleSplit(section_lines, c.fontname, c._fontsize, width - 100)
+            sec_lines = simpleSplit(section_lines, font_name, font_sizes["section_title"] + 2, width - 100)
             for line in sec_lines:
                 c.drawString(70, y_position, line)
-                y_position -= 14
-            #c.drawString(70, y_position, f"Раздел №{idx + 1}. {section[1]}")
+                y_position -= line_spacing["chapter_title"]  # crutch
+            # c.drawString(70, y_position, f"Раздел №{idx + 1}. {section[1]}")
 
             for i, ch in enumerate(book.chapters[section[1]]):
-                y_position -= 14
-                if y_position < 100:
+                y_position -= line_spacing["chapter_title"]
+                if y_position < 150:
                     c.showPage()
                     y_position = height - 70
-                font_name = "DejaVuSerif"
-                font_size = 14
-                c.setFont(font_name, font_size)
+                c.setFont(font_name, font_sizes["chapter_title"] + 2)
                 chapter_lines = f"{i + 1}. {ch[1]}"
-                ch_lines = simpleSplit(chapter_lines, c.fontname, c._fontsize, width - 100)
+                ch_lines = simpleSplit(chapter_lines, font_name, font_sizes["chapter_title"] + 2, width - 100)
                 for line in ch_lines:
                     c.drawString(90, y_position, line)
                     y_position -= 14
-                #c.drawString(80, y_position, f"{i + 1}. {ch[1]}")
+                # c.drawString(80, y_position, f"{i + 1}. {ch[1]}")
 
                 if len(ch) > 2:  # Проверяем наличие текста главы
-                    chapter = '\n\n'.join(ch[2].split('\n\n')[0:]).strip()
-                    lines = simpleSplit(chapter, font_name, font_size, width - 100)
+                    chapter = '\n'.join(ch[2].split('\n')[0:]).strip()
+                    lines = simpleSplit(chapter, font_name, font_sizes["chapter_text"], width - 100)
 
-                    y_position -= 14
+                    y_position -= line_spacing["chapter_title"]
                     for line in lines:
-                        y_position -= 12
+                        y_position -= line_spacing["chapter_text"]
                         if y_position < 100:
                             c.showPage()
                             y_position = height - 70
-                        c.setFont("DejaVuSerif", 12)
+                        c.setFont(font_name, font_sizes["chapter_title"])
                         c.drawString(90, y_position, line)
-                    y_position -= 14
+                    y_position -= line_spacing["chapter_title"]
 
         c.save()
         logger.info(f"Книга {book.book}({book.id}) сохранена в файл {pdf_file_path}")

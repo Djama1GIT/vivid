@@ -9,15 +9,15 @@ services:
     env_file:
       - .env
       - .env-non-dev
-#    volumes:
-#      - db_data:/var/lib/postgresql/data
+    volumes:
+      - db_data:/var/lib/postgresql/data
 
   server:
     build:
       context: .
       dockerfile: Dockerfile.backend
     container_name: vivid_server
-    command: sh -c "python main.py"
+    command: sh -c "alembic upgrade head && python main.py"
     ports:
       - 8087:8077
     restart: always
@@ -28,8 +28,8 @@ services:
       - .env-non-dev
     depends_on:
       - db
-#    volumes:
-#      - server_data:/app/data
+    volumes:
+      - server_data:/app/data
 
   client:
     build:
@@ -49,7 +49,7 @@ services:
 #      - client_data:/app/data
 
 
-#volumes:
-#  db_data:
-#  server_data:
+volumes:
+  db_data:
+  server_data:
 #  client_data:
