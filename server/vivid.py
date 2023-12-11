@@ -22,7 +22,8 @@ class Vivid:
     D - Джамал
     """
 
-    CHAPTER_OR_SECTION_PATTERN = r'(\d+)\.\s(.*)'
+    SECTION_PATTERN = r'(\d+)\.\s(?!Раздел\s)\b(.*)'
+    CHAPTER_PATTERN = r'(\d+)\.\s(?!Глава\s)\b(.*)'
     CHAPTER_TEXT_PATTERN = "Текст главы"
 
     REQUEST_CHAPTERS = """
@@ -179,8 +180,6 @@ class Vivid:
                 chapter_text = temp_chapter_text[0].strip()
             chapter_text = re.sub(r'\nГлава .?\d.*', '', chapter_text)
             chapter_text = re.sub(r'\nЭта глава .*', '', chapter_text)
-            # chapter_text = re.sub(r'Эта глава посвящена.*', '', chapter_text)  ### проверка на уничтожение
-            # chapter_text = re.sub(r'В (этой|следующей) главе.*', '', chapter_text)  ### проверка на уничтожение
             chapter_text = re.sub(r'\nВ этой главе .*', '', chapter_text)
             chapter_text = re.sub(r'\nВ следующей главе .*', '', chapter_text)
             chapter_text = re.sub(r'(^(?!Глава\n).*?\.)\s*(.*)', '', chapter_text.strip()).strip()
@@ -215,7 +214,7 @@ class Vivid:
             _sections = ""
             async for text in Vivid.sections_generator(book):
                 _sections += text
-            sections = re.findall(Vivid.CHAPTER_OR_SECTION_PATTERN, "".join(_sections))
+            sections = re.findall(Vivid.SECTION_PATTERN, "".join(_sections).replace("'", "").replace('"', ''))
             logger.info(f"Generated sections: {sections}")
         return sections
 
@@ -226,7 +225,7 @@ class Vivid:
             _chapters = ""
             async for text in Vivid.chapters_generator(book, section):
                 _chapters += text
-            chapters = re.findall(Vivid.CHAPTER_OR_SECTION_PATTERN, "".join(_chapters))
+            chapters = re.findall(Vivid.CHAPTER_PATTERN, "".join(_chapters).replace("'", "").replace('"', ''))
             logger.info(f"Generated chapters for section {section}: {chapters}")
         return chapters
 
@@ -263,7 +262,7 @@ class Vivid:
     @staticmethod
     async def generate_pregeneration(book: BookOfSessionBaseWithExtra):
         pregeneration = ""
-        while len(pregeneration) < 50:
+        while len(pregeneration) < 50 or "<div>" in pregeneration:
             pregeneration = ""
             async for text in Vivid.pregeneration_generator(book):
                 pregeneration += text

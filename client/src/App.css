@@ -365,3 +365,26 @@ input:disabled, select:disabled, textarea:disabled, .disabled {
     font-size: 6vh;
     margin-left: 4vh;
 }
+.flash {
+  animation: flash-animation 0.4s linear infinite;
+}
+
+@keyframes flash-animation {
+  0% {
+    background-color: red;
+    border-image: linear-gradient(to right, red, transparent, red, transparent, red) 1
+  }
+  25% {
+    background-color: black;
+  }
+  50% {
+    background-color: transparent;
+  }
+  75% {
+    background-color: black;
+    border-image: linear-gradient(to right, transparent, red, transparent, red, transparent) 2
+  }
+  100% {
+    background-color: red;
+  }
+}

@@ -43,9 +43,9 @@ function App() {
     // Listen for messages
     socketRef.current.addEventListener('message', function (event) {
       const data = JSON.parse(event.data);
-      if (data.code == -1) {
+      if (data.code === -1) {
         changeURLParam('cache', data.session);
-      } else if (data.code == 1) {
+      } else if (data.code === 1) {
         setGenre(data.genre);
         setBookName(data.bookName);
         setChaptersCount(data.chaptersCount);
@@ -62,14 +62,14 @@ function App() {
             chapters: data.chapters[title] ? data.chapters[title] : []
           }
         }));
-      } else if (data.code == 2) {
+      } else if (data.code === 2) {
         setSections(data.sections.map(([id, title]) => (
           {
             name: title,
             chapters: [],
           }
         )));
-      } else if (data.code == 3) {
+      } else if (data.code === 3) {
         setSections((prevSections) => {
           return prevSections.map((section) => {
             if (section.name === data.section) {
@@ -82,9 +82,9 @@ function App() {
             }
           });
         });
-      } else if (data.code == 4) {
+      } else if (data.code === 4) {
         setPregeneration(data.pregeneration)
-      } else if (data.code == 5) {
+      } else if (data.code === 5) {
         setSections((prevSections) => {
          return prevSections.map((section) => {
            if (section.name === data.section) {
@@ -103,9 +103,9 @@ function App() {
            }
          });
        });
-     } else if (data.code == 6) {
+     } else if (data.code === 6) {
         setBookLink(data.link);
-     } else if (data.code == 418) {
+     } else if (data.code === 418) {
         setErrorMessage(data.message);
      }
      updateStep();
@@ -152,7 +152,7 @@ function App() {
         temp_step = 5
     }
     setAlreadyGeneratedChaptersCount(alreadyGenerated);
-    if (alreadyGenerated == chaptersCount * sectionsCount && temp_step >= 5) {
+    if (alreadyGenerated === chaptersCount * sectionsCount && temp_step >= 5) {
         temp_step = 5.1
     }
     if (bookLink && temp_step >= 5.1) {
@@ -194,6 +194,34 @@ function App() {
   };
 
   const handleSectionsButtonClick = () => {
+    const hasDuplicateSections = sections.some((currentSection, index) => {
+      return sections.some((section, i) => i !== index && section.name === currentSection.name);
+    });
+
+    if (hasDuplicateSections) {
+      const duplicateSections = sections.filter((currentSection, index) => {
+        return sections.some((section, i) => i !== index && section.name === currentSection.name);
+      });
+      console.log(duplicateSections);
+      const section1Index = sections.indexOf(duplicateSections[0]);
+      const section2Index = sections.indexOf(duplicateSections[1]);
+
+      const section1Id = `section-${section1Index + 1}`;
+      const section2Id = `section-${section2Index + 1}`;
+      const section1Element = document.getElementById(section1Id);
+      const section2Element = document.getElementById(section2Id);
+
+      section1Element.classList.add("flash");
+      section2Element.classList.add("flash");
+
+      setTimeout(() => {
+        section1Element.classList.remove("flash");
+        section2Element.classList.remove("flash");
+      }, 1000);
+
+      return;
+    }
+
     socketRef.current.send(JSON.stringify({
         cmd: "confirm_sections",
         sections: sections,
@@ -201,13 +229,51 @@ function App() {
     setStep(2.5);
   };
 
-  const handleChaptersButtonClick = () => {
+const handleChaptersButtonClick = () => {
+  const duplicateChapters = [];
+
+  sections.forEach((currentSection, sectionIndex) => {
+    const chapters = currentSection.chapters.map((chapter) => chapter[1]);
+
+    chapters.forEach((chapter, chapterIndex) => {
+      const chapterOccurrences = chapters.filter((c) => c === chapter);
+
+      if (chapterOccurrences.length > 1) {
+        duplicateChapters.push({
+          sectionIndex: sectionIndex,
+          chapterIndex: chapterIndex
+        });
+      }
+    });
+  });
+
+  if (duplicateChapters.length > 0) {
+    duplicateChapters.forEach((duplicateChapter) => {
+      const sectionIndex = duplicateChapter.sectionIndex;
+      const chapterIndex = duplicateChapter.chapterIndex;
+
+      const sectionId = `section-${sectionIndex + 1}`;
+      const chapterId = `sections-${sectionIndex + 1}-chapter-${chapterIndex + 1}`;
+
+      const sectionElement = document.getElementById(sectionId);
+      const chapterElement = document.getElementById(chapterId);
+
+      sectionElement.classList.add("flash");
+      chapterElement.classList.add("flash");
+
+      setTimeout(() => {
+        sectionElement.classList.remove("flash");
+        chapterElement.classList.remove("flash");
+      }, 1000);
+    });
+  } else {
     socketRef.current.send(JSON.stringify({
-        cmd: "confirm_chapters",
-        sections: sections,
+      cmd: "confirm_chapters",
+      sections: sections,
     }));
     setStep(3.5);
-  };
+  }
+};
 
   const handleDescriptionButtonClick = () => {
     socketRef.current.send(JSON.stringify({
@@ -232,15 +298,15 @@ function App() {
       <p className="step step1">1</p>
       <div className="form" disabled={step > 1}>
         <div className="selector">
-            <input type="number" id="sections_count" value={sectionsCount} onChange={(e) => setSectionsCount(e.target.value)} placeholder="Sections count" min="4" max="12" disabled={step != 1}/>
+            <input type="number" id="sections_count" value={sectionsCount} onChange={(e) => setSectionsCount(e.target.value)} placeholder="Количество разделов" min="4" max="12" disabled={step != 1}/>
         </div>
 
         <div className="selector">
-            <input type="number" id="chapters_count" value={chaptersCount} onChange={(e) => setChaptersCount(e.target.value)} placeholder="Chapters count" min="3" max="40" disabled={step != 1}/>
+            <input type="number" id="chapters_count" value={chaptersCount} onChange={(e) => setChaptersCount(e.target.value)} placeholder="Кол-во глав в разделе" min="3" max="40" disabled={step != 1}/>
         </div>
 
         <div className="selector">
-            <input type="number" id="chapters_length" value={chaptersLength} onChange={(e) => setChaptersLength(e.target.value)} placeholder="Chapters length" min="300" max="4000" disabled={step != 1}/>
+            <input type="number" id="chapters_length" value={chaptersLength} onChange={(e) => setChaptersLength(e.target.value)} placeholder="Средняя длина главы" min="300" max="4000" disabled={step != 1}/>
         </div>
 
         <div className="selector">
@@ -260,7 +326,7 @@ function App() {
             </select>
         </div>
 
-        {step == 1 ? <button id="requestButton" onClick={handleButtonClick}>Начать генерацию</button> : ""}
+        {step === 1 ? <button id="requestButton" onClick={handleButtonClick}>Начать генерацию</button> : ""}
    </div>
 
    {step >= 2 ? <div className="sections">
@@ -290,7 +356,7 @@ function App() {
           />
         ))}
      </div>
-     {step == 2 ? <button id="confirmSections" onClick={handleSectionsButtonClick}>Подтвердить</button> : "" }
+     {step === 2 ? <button id="confirmSections" onClick={handleSectionsButtonClick}>Подтвердить</button> : "" }
     </div> : ""}
 
    {step >= 3 ? <div className="chapters">
@@ -335,7 +401,7 @@ function App() {
           ))}
         </div>
       ))}
-      {(step == 3 && sections.every((section) => section.chapters.length > 0) ) ?
+      {(step === 3 && sections.every((section) => section.chapters.length > 0) ) ?
       <button id="confirmChapters" onClick={handleChaptersButtonClick}>Подтвердить</button> : "" }
     </div> : ""}
 
@@ -351,7 +417,7 @@ function App() {
           value={pregeneration}
           disabled={step != 4}/>
        </div>
-       {step == 4 ? <button id="confirmDescription" onClick={handleDescriptionButtonClick}>
+       {step === 4 ? <button id="confirmDescription" onClick={handleDescriptionButtonClick}>
          Сгенерировать книгу
        </button> : "" }
    </div> : ""}
@@ -364,15 +430,15 @@ function App() {
             { step < 5.2 ? <div>
                 Генерация... {(alreadyGeneratedChaptersCount / (sectionsCount * chaptersCount) * 100).toFixed(2)}%
             </div> : ""}
-            {step == 5.2 ? <div>
+            {step === 5.2 ? <div>
                 Книга собирается в pdf...
             </div> : ""}
-            {step == 5.3 ? <div>
+            {step === 5.3 ? <div>
                 Книга готова! Ссылка: <a href={bookLink} target="_blank" rel="noopener noreferrer">клик</a>
             </div> : ""}
         </div>
        </div>
-       {step == 5.1 ? <button id="confirmResults" onClick={handleConfirmResultsButtonClick}>
+       {step === 5.1 ? <button id="confirmResults" onClick={handleConfirmResultsButtonClick}>
          Собрать книгу в pdf
        </button> : "" }
    </div> : ""}
