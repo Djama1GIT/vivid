@@ -1,6 +1,6 @@
 # Vivid
 
-Vivid is a AI book generation project based on FastAPI.
+Vivid is a AI book generation project based on GPT, Python, FastAPI.
 
 ## Installation and Setup <sup><sub>(tested on Linux)</sub></sup>
 
