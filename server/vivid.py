@@ -262,7 +262,7 @@ class Vivid:
     @staticmethod
     async def generate_pregeneration(book: BookOfSessionBaseWithExtra):
         pregeneration = ""
-        while len(pregeneration) < 50 or "<div>" in pregeneration:
+        while len(pregeneration) < 50 or "<div" in pregeneration:
             pregeneration = ""
             async for text in Vivid.pregeneration_generator(book):
                 pregeneration += text
