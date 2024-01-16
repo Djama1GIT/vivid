@@ -19,7 +19,7 @@ services:
     container_name: vivid_server
     command: sh -c "alembic upgrade head && python main.py"
     ports:
-      - 8087:8077
+      - 8077:8077
     restart: always
     environment:
       - NODE_ENV=production
@@ -41,7 +41,7 @@ services:
     restart: always
     environment:
       - NODE_ENV=production
-      - REACT_APP_WEBSOCKET_PORT=8087
+      - REACT_APP_WEBSOCKET_PORT=8077
     env_file:
       - .env
       - .env-non-dev
